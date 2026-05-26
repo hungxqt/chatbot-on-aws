@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -98,7 +98,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.0" },
     { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.53.0" },
     { name = "slowapi", specifier = ">=0.1.9" },
-    { name = "sqladmin", specifier = ">=0.24.0" },
+    { name = "sqladmin", specifier = ">=0.25.1" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.40" },
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "tqdm", specifier = ">=4.66.0" },
@@ -2527,7 +2527,7 @@ wheels = [
 
 [[package]]
 name = "sqladmin"
-version = "0.25.0"
+version = "0.25.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jinja2" },
@@ -2536,9 +2536,9 @@ dependencies = [
     { name = "starlette" },
     { name = "wtforms" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9f/42/ac352f9afc118491a57c3acd1d54c84447f8d6a7b9420fdd9e4fe28b3ba7/sqladmin-0.25.0.tar.gz", hash = "sha256:370f183eca5ea95281176c086b23d704773e6c77b745342753601a9a9abcb93c", size = 1440449, upload-time = "2026-04-18T01:25:40.15Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/62/619ce55244760e500065ac9a6a7da6d53664825318fbdf3b7f91df3a010b/sqladmin-0.25.1.tar.gz", hash = "sha256:76b95c4a8bf7e7cbe2cd7451053d2f0023e7c4be0efd15687d647597b47aeb4f", size = 1440455, upload-time = "2026-05-16T11:59:35.373Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ba/1c/4a9bdeb541478a27fd8bf2af85faa3a1574a8ab3de0f07e8c01b29ccd9ff/sqladmin-0.25.0-py3-none-any.whl", hash = "sha256:fd45a7c78e989cb1cf8242f94bd108475f5d35622d79035a2cb147350f54ce1d", size = 1456019, upload-time = "2026-04-18T01:25:38.523Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/f6/0e1a39f1ddc46187e8513077f908e29e4b5ea105c393adc96156db8f2b7c/sqladmin-0.25.1-py3-none-any.whl", hash = "sha256:6ee6dae1b356820e91b1940322ac7fde4c0ea5ff0774b32796be98601c7247df", size = 1456028, upload-time = "2026-05-16T11:59:33.69Z" },
 ]
 
 [[package]]
