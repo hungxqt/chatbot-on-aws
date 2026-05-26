@@ -1,0 +1,305 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Root stack for webapp-group10. Orchestrates nested stacks: network, security,
+  data, compute, and edge. Deploys a full-stack AI agent application on AWS
+  with ECS Fargate, RDS PostgreSQL, ElastiCache Redis, Bedrock KB, CloudFront,
+  WAF, and Network Firewall.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  ProjectName:
+    Type: String
+    Default: webapp-group10
+    MinLength: 3
+    MaxLength: 18
+    AllowedPattern: "^[a-z][a-z0-9-]*[a-z0-9]$"
+    ConstraintDescription: "Use 3-18 lowercase letters, numbers, and hyphens; start with a letter and end with a letter or number."
+    Description: "Project name used as prefix for all resource names"
+
+  VpcCidr:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: "CIDR block for the VPC"
+
+  RdsMasterUsername:
+    Type: String
+    Default: postgres
+    Description: "Master username for RDS PostgreSQL"
+    MinLength: 1
+    MaxLength: 63
+
+  RdsMasterPassword:
+    Type: String
+    NoEcho: true
+    Description: "Master password for RDS PostgreSQL (min 8 characters)"
+    MinLength: 8
+    MaxLength: 128
+
+  EnableRdsSsl:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: "Enable SSL enforcement on RDS PostgreSQL"
+
+  CreateOpenSearchCollection:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: "Create OpenSearch Serverless collection for Bedrock KB (adds ~$700/month)"
+
+  DomainName:
+    Type: String
+    Default: aws.hungtran.id.vn
+    Description: "Custom domain name for CloudFront distribution"
+
+  AcmCertificateArn:
+    Type: String
+    Description: "ACM certificate ARN in us-east-1 for CloudFront HTTPS"
+
+  HostedZoneId:
+    Type: String
+    Default: ""
+    Description: "Route 53 Hosted Zone ID. If empty, no DNS record is created."
+
+  CloudFrontOriginPrefixListId:
+    Type: String
+    Default: ""
+    Description: "Optional AWS-managed CloudFront origin-facing prefix list ID for stricter ALB ingress. If empty, the internal ALB allows port 8000 from any routable source."
+
+  TemplatesBucketName:
+    Type: String
+    Description: "S3 bucket containing the nested stack templates"
+
+  TemplatesBucketPrefix:
+    Type: String
+    Default: "cloudformation/sections"
+    Description: "S3 key prefix for nested stack templates"
+
+  ContainerImage:
+    Type: String
+    MinLength: 1
+    Description: "Required backend container image URI. Push the image before creating the stack from the CloudFormation console."
+
+  HealthApiKeyValue:
+    Type: String
+    NoEcho: true
+    MinLength: 20
+    MaxLength: 128
+    Description: "API key value for API Gateway health endpoints and CloudFront health origin forwarding."
+
+  LambdaS3Bucket:
+    Type: String
+    Description: "S3 bucket containing the Lambda health check deployment package"
+
+  LambdaS3Key:
+    Type: String
+    Description: "S3 key for the Lambda health check .zip package"
+
+# ---------------------------------------------------------------------------
+# Conditions
+# ---------------------------------------------------------------------------
+Conditions:
+  ShouldCreateOpenSearch: !Equals [!Ref CreateOpenSearchCollection, "true"]
+
+# ---------------------------------------------------------------------------
+# Resources — Nested Stacks
+# ---------------------------------------------------------------------------
+Resources:
+
+  # =========================================================================
+  # Layer 1: Network
+  # =========================================================================
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${TemplatesBucketName}.s3.${AWS::Region}.amazonaws.com/${TemplatesBucketPrefix}/network.yaml"
+      Parameters:
+        ProjectName: !Ref ProjectName
+        VpcCidr: !Ref VpcCidr
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-network-stack"
+
+  # =========================================================================
+  # Layer 2: Security (depends on Network for VPC + subnet IDs)
+  # =========================================================================
+  SecurityStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${TemplatesBucketName}.s3.${AWS::Region}.amazonaws.com/${TemplatesBucketPrefix}/security.yaml"
+      Parameters:
+        ProjectName: !Ref ProjectName
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
+        CloudFrontOriginPrefixListId: !Ref CloudFrontOriginPrefixListId
+        DatabaseSubnet1Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet1Id
+        DatabaseSubnet2Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet2Id
+        DatabaseSubnet3Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet3Id
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-security-stack"
+
+  # =========================================================================
+  # Layer 3: Data (depends on Network + Security)
+  # =========================================================================
+  DataStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${TemplatesBucketName}.s3.${AWS::Region}.amazonaws.com/${TemplatesBucketPrefix}/data.yaml"
+      Parameters:
+        ProjectName: !Ref ProjectName
+        PrivateSubnet1Id: !GetAtt NetworkStack.Outputs.PrivateSubnet1Id
+        PrivateSubnet2Id: !GetAtt NetworkStack.Outputs.PrivateSubnet2Id
+        PrivateSubnet3Id: !GetAtt NetworkStack.Outputs.PrivateSubnet3Id
+        DatabaseSubnet1Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet1Id
+        DatabaseSubnet2Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet2Id
+        DatabaseSubnet3Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet3Id
+        RdsSecurityGroupId: !GetAtt SecurityStack.Outputs.RdsSecurityGroupId
+        RedisSecurityGroupId: !GetAtt SecurityStack.Outputs.RedisSecurityGroupId
+        EfsSecurityGroupId: !GetAtt SecurityStack.Outputs.EfsSecurityGroupId
+        RdsSubnetGroupName: !GetAtt SecurityStack.Outputs.RdsSubnetGroupName
+        RdsMonitoringRoleArn: !GetAtt SecurityStack.Outputs.RdsMonitoringRoleArn
+        KmsRdsKeyArn: !GetAtt SecurityStack.Outputs.KmsRdsKeyArn
+        KmsEfsKeyArn: !GetAtt SecurityStack.Outputs.KmsEfsKeyArn
+        RdsMasterUsername: !Ref RdsMasterUsername
+        RdsMasterPassword: !Ref RdsMasterPassword
+        EnableRdsSsl: !Ref EnableRdsSsl
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-data-stack"
+
+  # =========================================================================
+  # Layer 3b: Bedrock (conditional — only when OpenSearch collection is created)
+  # =========================================================================
+  BedrockStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: ShouldCreateOpenSearch
+    DependsOn: DataStack
+    Properties:
+      TemplateURL: !Sub "https://${TemplatesBucketName}.s3.${AWS::Region}.amazonaws.com/${TemplatesBucketPrefix}/bedrock.yaml"
+      Parameters:
+        ProjectName: !Ref ProjectName
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-bedrock-stack"
+
+  # =========================================================================
+  # Layer 4: Compute (depends on Network + Security + Data)
+  # =========================================================================
+  ComputeStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${TemplatesBucketName}.s3.${AWS::Region}.amazonaws.com/${TemplatesBucketPrefix}/compute.yaml"
+      Parameters:
+        ProjectName: !Ref ProjectName
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
+        PrivateSubnet1Id: !GetAtt NetworkStack.Outputs.PrivateSubnet1Id
+        PrivateSubnet2Id: !GetAtt NetworkStack.Outputs.PrivateSubnet2Id
+        PrivateSubnet3Id: !GetAtt NetworkStack.Outputs.PrivateSubnet3Id
+        AlbSecurityGroupId: !GetAtt SecurityStack.Outputs.AlbSecurityGroupId
+        EcsSecurityGroupId: !GetAtt SecurityStack.Outputs.EcsSecurityGroupId
+        LambdaSecurityGroupId: !GetAtt SecurityStack.Outputs.LambdaSecurityGroupId
+        EcsTaskExecutionRoleArn: !GetAtt SecurityStack.Outputs.EcsTaskExecutionRoleArn
+        EcsTaskRoleArn: !GetAtt SecurityStack.Outputs.EcsTaskRoleArn
+        LambdaExecutionRoleArn: !GetAtt SecurityStack.Outputs.LambdaExecutionRoleArn
+        EfsFileSystemId: !GetAtt DataStack.Outputs.EfsFileSystemId
+        EfsAccessPointId: !GetAtt DataStack.Outputs.EfsAccessPointId
+        EfsHealthCheckAccessPointId: !GetAtt DataStack.Outputs.EfsHealthCheckAccessPointId
+        RdsEndpoint: !GetAtt DataStack.Outputs.RdsEndpoint
+        RdsPort: !GetAtt DataStack.Outputs.RdsPort
+        RedisEndpoint: !GetAtt DataStack.Outputs.RedisEndpoint
+        RedisPort: !GetAtt DataStack.Outputs.RedisPort
+        KnowledgeBaseId: !If
+          - ShouldCreateOpenSearch
+          - !GetAtt BedrockStack.Outputs.KnowledgeBaseId
+          - ""
+        KnowledgeBaseDataSourceId: !If
+          - ShouldCreateOpenSearch
+          - !GetAtt BedrockStack.Outputs.DataSourceId
+          - ""
+        SecretBackendSecretKeyArn: !GetAtt DataStack.Outputs.SecretBackendSecretKeyArn
+        SecretBackendApiKeyArn: !GetAtt DataStack.Outputs.SecretBackendApiKeyArn
+        SecretBackendDatabaseArn: !GetAtt DataStack.Outputs.SecretBackendDatabaseArn
+        SecretBackendRedisArn: !GetAtt DataStack.Outputs.SecretBackendRedisArn
+        ContainerImage: !Ref ContainerImage
+        HealthApiKeyValue: !Ref HealthApiKeyValue
+        LambdaS3Bucket: !Ref LambdaS3Bucket
+        LambdaS3Key: !Ref LambdaS3Key
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-compute-stack"
+
+  # =========================================================================
+  # Layer 5: Edge (depends on Compute for ALB + API Gateway)
+  # =========================================================================
+  EdgeStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${TemplatesBucketName}.s3.${AWS::Region}.amazonaws.com/${TemplatesBucketPrefix}/edge.yaml"
+      Parameters:
+        ProjectName: !Ref ProjectName
+        DomainName: !Ref DomainName
+        AcmCertificateArn: !Ref AcmCertificateArn
+        AlbArn: !GetAtt ComputeStack.Outputs.AlbArn
+        AlbDnsName: !GetAtt ComputeStack.Outputs.AlbDnsName
+        ApiGatewayId: !GetAtt ComputeStack.Outputs.ApiGatewayId
+        HealthApiKeyValue: !Ref HealthApiKeyValue
+        FrontendBucketDomainName: !GetAtt DataStack.Outputs.FrontendBucketDomainName
+        HostedZoneId: !Ref HostedZoneId
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-edge-stack"
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  # Network
+  VpcId:
+    Description: "VPC ID"
+    Value: !GetAtt NetworkStack.Outputs.VpcId
+
+  # Data
+  RdsEndpoint:
+    Description: "RDS PostgreSQL endpoint"
+    Value: !GetAtt DataStack.Outputs.RdsEndpoint
+
+  RedisEndpoint:
+    Description: "ElastiCache Redis endpoint"
+    Value: !GetAtt DataStack.Outputs.RedisEndpoint
+
+  KnowledgeBaseId:
+    Condition: ShouldCreateOpenSearch
+    Description: "Bedrock Knowledge Base ID"
+    Value: !GetAtt BedrockStack.Outputs.KnowledgeBaseId
+
+  # Compute
+  EcsClusterArn:
+    Description: "ECS Cluster ARN"
+    Value: !GetAtt ComputeStack.Outputs.EcsClusterArn
+
+  EcrRepositoryUri:
+    Description: "ECR Repository URI — push your container image here"
+    Value: !GetAtt ComputeStack.Outputs.EcrRepositoryUri
+
+  AlbDnsName:
+    Description: "Internal ALB DNS name"
+    Value: !GetAtt ComputeStack.Outputs.AlbDnsName
+
+  ApiGatewayInvokeUrl:
+    Description: "API Gateway invoke URL for health checks"
+    Value: !GetAtt ComputeStack.Outputs.ApiGatewayInvokeUrl
+
+  # Edge
+  CloudFrontDistributionId:
+    Description: "CloudFront Distribution ID"
+    Value: !GetAtt EdgeStack.Outputs.CloudFrontDistributionId
+
+  CloudFrontDomainName:
+    Description: "CloudFront domain name"
+    Value: !GetAtt EdgeStack.Outputs.CloudFrontDomainName
+
+  ApplicationUrl:
+    Description: "Application URL"
+    Value: !Sub "https://${DomainName}"

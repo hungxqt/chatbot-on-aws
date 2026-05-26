@@ -1,0 +1,574 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  Compute layer. Provisions ECR, ECS Fargate cluster with
+  auto-scaling, internal ALB, Lambda health-check function, and API Gateway.
+
+# ==============================================================================
+# Parameters
+# ==============================================================================
+Parameters:
+  ProjectName:
+    Type: String
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet3Id:
+    Type: AWS::EC2::Subnet::Id
+  AlbSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  EcsSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  LambdaSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  EcsTaskExecutionRoleArn:
+    Type: String
+  EcsTaskRoleArn:
+    Type: String
+  LambdaExecutionRoleArn:
+    Type: String
+  EfsFileSystemId:
+    Type: String
+  EfsAccessPointId:
+    Type: String
+  EfsHealthCheckAccessPointId:
+    Type: String
+  RdsEndpoint:
+    Type: String
+  RdsPort:
+    Type: String
+    Default: "5432"
+  RedisEndpoint:
+    Type: String
+  RedisPort:
+    Type: String
+    Default: "6379"
+  KnowledgeBaseId:
+    Type: String
+  ContainerImage:
+    Type: String
+    Default: ""
+    Description: "ECR image URI for backend container. If empty, uses account default."
+  HealthCheckUrl:
+    Type: String
+    Default: ""
+    Description: "URL for main app health check endpoint"
+
+# ==============================================================================
+# Conditions
+# ==============================================================================
+Conditions:
+  HasContainerImage: !Not [!Equals [!Ref ContainerImage, ""]]
+  HasHealthCheckUrl: !Not [!Equals [!Ref HealthCheckUrl, ""]]
+
+# ==============================================================================
+# Resources
+# ==============================================================================
+Resources:
+
+  # ============================================================================
+  # 1. ECR Repository
+  # ============================================================================
+  EcrRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${ProjectName}/backend"
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      ImageTagMutability: IMMUTABLE
+      EncryptionConfiguration:
+        EncryptionType: AES256
+
+  # ============================================================================
+  # 2. ECS Cluster
+  # ============================================================================
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "${ProjectName}-backend"
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+      ClusterSettings:
+        - Name: containerInsights
+          Value: disabled
+      Configuration:
+        ExecuteCommandConfiguration:
+          Logging: DEFAULT
+
+  # ============================================================================
+  # 3. ECS Task Definition
+  # ============================================================================
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${ProjectName}-task-definition"
+      Cpu: "2048"
+      Memory: "4096"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref EcsTaskExecutionRoleArn
+      TaskRoleArn: !Ref EcsTaskRoleArn
+      RuntimePlatform:
+        OperatingSystemFamily: LINUX
+        CpuArchitecture: X86_64
+      Volumes:
+        - Name: efs-shared
+          EFSVolumeConfiguration:
+            FilesystemId: !Ref EfsFileSystemId
+            TransitEncryption: ENABLED
+            RootDirectory: /
+            AuthorizationConfig:
+              IAM: ENABLED
+              AccessPointId: !Ref EfsAccessPointId
+      ContainerDefinitions:
+        - Name: !Sub "${ProjectName}-container"
+          Essential: true
+          Image: !If
+            - HasContainerImage
+            - !Ref ContainerImage
+            - !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ProjectName}/backend:latest"
+          Cpu: 2048
+          Memory: 4096
+          MemoryReservation: 3072
+          PortMappings:
+            - ContainerPort: 8000
+              HostPort: 8000
+              Protocol: tcp
+              AppProtocol: http
+              Name: !Sub "${ProjectName}-container-port"
+          MountPoints:
+            - SourceVolume: efs-shared
+              ContainerPath: /mnt/efs/shared
+              ReadOnly: false
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/ecs/${ProjectName}-${AWS::StackName}-task-definition"
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+              awslogs-create-group: "true"
+          EnvironmentFiles:
+            - Value: !Sub "arn:aws:s3:::${ProjectName}-backend-env/.env"
+              Type: s3
+          Secrets:
+            - Name: API_KEY
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/API_KEY"
+            - Name: SECRET_KEY
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/SECRET_KEY"
+            - Name: POSTGRES_HOST
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/database:POSTGRES_HOST::"
+            - Name: POSTGRES_PORT
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/database:POSTGRES_PORT::"
+            - Name: POSTGRES_USER
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/database:POSTGRES_USER::"
+            - Name: POSTGRES_PASSWORD
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/database:POSTGRES_PASSWORD::"
+            - Name: POSTGRES_DB
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/database:POSTGRES_DB::"
+            - Name: REDIS_HOST
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/redis:REDIS_HOST::"
+            - Name: BEDROCK_KNOWLEDGE_BASE_ID
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/bedrock:BEDROCK_KNOWLEDGE_BASE_ID::"
+            - Name: BEDROCK_KB_DATA_SOURCE_ID
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/bedrock:BEDROCK_KB_DATA_SOURCE_ID::"
+            - Name: BEDROCK_KB_S3_BUCKET
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/bedrock:BEDROCK_KB_S3_BUCKET::"
+            - Name: BEDROCK_KB_S3_PREFIX
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/bedrock:BEDROCK_KB_S3_PREFIX::"
+          Environment:
+            - Name: ENVIRONMENT
+              Value: production
+            - Name: DEBUG
+              Value: "false"
+            - Name: PROJECT_NAME
+              Value: ChatGPT
+            - Name: REDIS_SSL
+              Value: "true"
+            - Name: REDIS_ENABLED
+              Value: "true"
+            - Name: AI_MODEL
+              Value: "global.anthropic.claude-sonnet-4-6"
+            - Name: AI_TEMPERATURE
+              Value: "0.7"
+            - Name: AI_AVAILABLE_MODELS
+              Value: '["global.anthropic.claude-opus-4-6-v1", "global.anthropic.claude-sonnet-4-5-20250929-v1:0", "global.anthropic.claude-opus-4-5-20251101-v1:0"]'
+            - Name: ACCESS_TOKEN_EXPIRE_MINUTES
+              Value: "10080"
+            - Name: ALGORITHM
+              Value: HS256
+            - Name: TIMEZONE
+              Value: UTC
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: S3_MEDIA_BUCKET
+              Value: !Sub "${ProjectName}-backend-bucket"
+            - Name: S3_MEDIA_PREFIX
+              Value: media
+            - Name: S3_MEDIA_REGION
+              Value: !Ref AWS::Region
+
+  # ============================================================================
+  # 4. Internal ALB + Listener + Target Group
+  # ============================================================================
+  InternalALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${ProjectName}-internal-alb"
+      Scheme: internal
+      Type: application
+      IpAddressType: ipv4
+      SecurityGroups:
+        - !Ref AlbSecurityGroupId
+      Subnets:
+        - !Ref PrivateSubnet1Id
+        - !Ref PrivateSubnet2Id
+        - !Ref PrivateSubnet3Id
+      LoadBalancerAttributes:
+        - Key: routing.http2.enabled
+          Value: "true"
+        - Key: idle_timeout.timeout_seconds
+          Value: "60"
+        - Key: routing.http.desync_mitigation_mode
+          Value: defensive
+        - Key: deletion_protection.enabled
+          Value: "false"
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${ProjectName}-tg"
+      VpcId: !Ref VpcId
+      Protocol: HTTP
+      Port: 8000
+      TargetType: ip
+      IpAddressType: ipv4
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /api/v1/health
+      HealthCheckPort: traffic-port
+      HealthCheckIntervalSeconds: 60
+      HealthCheckTimeoutSeconds: 40
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      ProtocolVersion: HTTP1
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: "true"
+        - Key: stickiness.type
+          Value: app_cookie
+        - Key: stickiness.app_cookie.cookie_name
+          Value: websocket-group10
+        - Key: stickiness.app_cookie.duration_seconds
+          Value: "86400"
+        - Key: deregistration_delay.timeout_seconds
+          Value: "300"
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref InternalALB
+      Port: 8000
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ============================================================================
+  # 5. ECS Service with Auto Scaling
+  # ============================================================================
+  EcsService:
+    Type: AWS::ECS::Service
+    DependsOn: ALBListener
+    Properties:
+      ServiceName: !Sub "${ProjectName}-task-definition-service"
+      Cluster: !Ref EcsCluster
+      TaskDefinition: !Ref TaskDefinition
+      SchedulingStrategy: REPLICA
+      DesiredCount: 6
+      AvailabilityZoneRebalancing: ENABLED
+      CapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Base: 0
+          Weight: 1
+      PlatformVersion: LATEST
+      EnableExecuteCommand: false
+      EnableECSManagedTags: true
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref EcsSecurityGroupId
+          Subnets:
+            - !Ref PrivateSubnet1Id
+            - !Ref PrivateSubnet2Id
+            - !Ref PrivateSubnet3Id
+      LoadBalancers:
+        - ContainerName: !Sub "${ProjectName}-container"
+          ContainerPort: 8000
+          TargetGroupArn: !Ref TargetGroup
+      DeploymentConfiguration:
+        Strategy: ROLLING
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      DeploymentController:
+        Type: ECS
+      ServiceConnectConfiguration:
+        Enabled: false
+
+  AutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      ServiceNamespace: ecs
+      ScalableDimension: ecs:service:DesiredCount
+      ResourceId: !Sub "service/${EcsCluster}/${EcsService.Name}"
+      MinCapacity: 6
+      MaxCapacity: 9
+      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService"
+
+  CpuScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub "${ProjectName}-cpu-scaling"
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 60
+
+  MemoryScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub "${ProjectName}-memory-scaling"
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 80
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageMemoryUtilization
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 60
+
+  # ============================================================================
+  # 6. Lambda Health Check
+  # ============================================================================
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ProjectName}-${AWS::StackName}-lambda-healthCheck"
+      RetentionInDays: 30
+
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: LambdaLogGroup
+    Properties:
+      FunctionName: !Sub "${ProjectName}-lambda-healthCheck"
+      Runtime: python3.12
+      Handler: handler.lambda_handler
+      CodeUri: ../functions/health_checker_lite/
+      MemorySize: 512
+      Timeout: 90
+      Architectures:
+        - x86_64
+      Role: !Ref LambdaExecutionRoleArn
+      AutoPublishAlias: health-check-production
+      AutoPublishAliasAllProperties: true
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 2
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroupId
+        SubnetIds:
+          - !Ref PrivateSubnet1Id
+          - !Ref PrivateSubnet2Id
+          - !Ref PrivateSubnet3Id
+      FileSystemConfigs:
+        - Arn: !Sub "arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:access-point/${EfsHealthCheckAccessPointId}"
+          LocalMountPath: /mnt/efs
+      Environment:
+        Variables:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST: !Ref RdsEndpoint
+          POSTGRES_PORT: !Ref RdsPort
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: ""
+          REDIS_HOST: !Ref RedisEndpoint
+          REDIS_PORT: !Ref RedisPort
+          REDIS_SSL: "true"
+          REDIS_PASSWORD: ""
+          ECS_CLUSTER_NAME: !Sub "${ProjectName}-backend"
+          EFS_MOUNT_DIR: /mnt/efs
+          BEDROCK_KNOWLEDGE_BASE_ID: !Ref KnowledgeBaseId
+          MAIN_APP_HEALTH_URL: !If
+            - HasHealthCheckUrl
+            - !Ref HealthCheckUrl
+            - !Sub "http://${InternalALB.DNSName}:8000/api/v1/health"
+      EphemeralStorage:
+        Size: 1024
+      LoggingConfig:
+        LogFormat: Text
+        LogGroup: !Sub "/aws/lambda/${ProjectName}-${AWS::StackName}-lambda-healthCheck"
+      RecursiveLoop: Terminate
+
+  # ============================================================================
+  # 7. API Gateway (for health check Lambda)
+  # ============================================================================
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ProjectName}-api-gateway"
+      ApiKeySourceType: HEADER
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  HealthResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: health
+
+  HealthCheckResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: health-check
+
+  HealthCheckMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref HealthCheckResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${LambdaFunction}:health-check-production/invocations"
+
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${LambdaFunction}:health-check-production"
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*"
+
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: HealthCheckMethod
+    Properties:
+      RestApiId: !Ref ApiGateway
+
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref ApiGateway
+      DeploymentId: !Ref ApiDeployment
+      StageName: v1
+
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn: ApiStage
+    Properties:
+      Name: !Sub "${ProjectName}-api-key"
+      Enabled: true
+
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ApiStage
+    Properties:
+      UsagePlanName: !Sub "${ProjectName}-health-check-plan"
+      ApiStages:
+        - ApiId: !Ref ApiGateway
+          Stage: v1
+      Quota:
+        Limit: 5000
+        Period: DAY
+      Throttle:
+        BurstLimit: 60
+        RateLimit: 20
+
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref UsagePlan
+
+# ==============================================================================
+# Outputs
+# ==============================================================================
+Outputs:
+  EcsClusterArn:
+    Description: ARN of the ECS cluster
+    Value: !GetAtt EcsCluster.Arn
+    Export:
+      Name: !Sub "${ProjectName}-EcsClusterArn"
+
+  EcsServiceName:
+    Description: Name of the ECS service
+    Value: !GetAtt EcsService.Name
+    Export:
+      Name: !Sub "${ProjectName}-EcsServiceName"
+
+  AlbDnsName:
+    Description: DNS name of the internal ALB
+    Value: !GetAtt InternalALB.DNSName
+    Export:
+      Name: !Sub "${ProjectName}-AlbDnsName"
+
+  AlbArn:
+    Description: ARN of the internal ALB
+    Value: !Ref InternalALB
+    Export:
+      Name: !Sub "${ProjectName}-AlbArn"
+
+  TargetGroupArn:
+    Description: ARN of the ALB target group
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Sub "${ProjectName}-TargetGroupArn"
+
+  LambdaFunctionArn:
+    Description: ARN of the Lambda health check function
+    Value: !GetAtt LambdaFunction.Arn
+    Export:
+      Name: !Sub "${ProjectName}-LambdaFunctionArn"
+
+  LambdaAliasArn:
+    Description: ARN of the Lambda alias
+    Value: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${LambdaFunction}:health-check-production"
+    Export:
+      Name: !Sub "${ProjectName}-LambdaAliasArn"
+
+  EcrRepositoryUri:
+    Description: URI of the ECR repository
+    Value: !GetAtt EcrRepository.RepositoryUri
+    Export:
+      Name: !Sub "${ProjectName}-EcrRepositoryUri"
+
+  ApiGatewayInvokeUrl:
+    Description: Invoke URL for the API Gateway stage
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/v1"
+    Export:
+      Name: !Sub "${ProjectName}-ApiGatewayInvokeUrl"
+
+  ApiGatewayId:
+    Description: ID of the API Gateway REST API
+    Value: !Ref ApiGateway
+    Export:
+      Name: !Sub "${ProjectName}-ApiGatewayId"

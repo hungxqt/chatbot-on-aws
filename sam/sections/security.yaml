@@ -1,0 +1,691 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Security layer. Creates security groups, IAM roles,
+  KMS encryption keys, RDS subnet group, and AWS Backup resources. Designed
+  as a nested stack consumed by a root template.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  ProjectName:
+    Type: String
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet3Id:
+    Type: AWS::EC2::Subnet::Id
+  DatabaseSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+  DatabaseSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+  DatabaseSubnet3Id:
+    Type: AWS::EC2::Subnet::Id
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # =========================================================================
+  # 1. Security Groups
+  # =========================================================================
+
+  # -------------------------------------------------------------------------
+  # 1a. ALB Security Group
+  # -------------------------------------------------------------------------
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Security group for ${ProjectName} internal ALB"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          SourceSecurityGroupId: !Ref EcsSecurityGroup
+          Description: "Allow TCP 8000 from ECS tasks"
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+          Description: "Allow all outbound traffic"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-alb-sg"
+
+  # -------------------------------------------------------------------------
+  # 1b. ECS Security Group
+  # -------------------------------------------------------------------------
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Security group for ${ProjectName} ECS tasks"
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+          Description: "Allow all outbound traffic"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-ecs-sg"
+
+  EcsSecurityGroupIngressFromAlb:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EcsSecurityGroup
+      IpProtocol: tcp
+      FromPort: 8000
+      ToPort: 8000
+      SourceSecurityGroupId: !Ref AlbSecurityGroup
+      Description: "Allow TCP 8000 from ALB"
+
+  # -------------------------------------------------------------------------
+  # 1c. RDS Security Group
+  # -------------------------------------------------------------------------
+  RdsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Security group for ${ProjectName} RDS database"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref EcsSecurityGroup
+          Description: "Allow TCP 5432 from ECS tasks"
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+          Description: "Allow TCP 5432 from Lambda functions"
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+          Description: "Allow all outbound traffic"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rds-sg"
+
+  # -------------------------------------------------------------------------
+  # 1d. Redis Security Group
+  # -------------------------------------------------------------------------
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Security group for ${ProjectName} Redis cluster"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref EcsSecurityGroup
+          Description: "Allow TCP 6379 from ECS tasks"
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+          Description: "Allow all outbound traffic"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-redis-sg"
+
+  # -------------------------------------------------------------------------
+  # 1e. EFS Security Group
+  # -------------------------------------------------------------------------
+  EfsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Security group for ${ProjectName} EFS filesystem"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref EcsSecurityGroup
+          Description: "Allow NFS from ECS tasks"
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+          Description: "Allow NFS from Lambda functions"
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+          Description: "Allow all outbound traffic"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-efs-sg"
+
+  # -------------------------------------------------------------------------
+  # 1f. Lambda Security Group
+  # -------------------------------------------------------------------------
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Security group for ${ProjectName} Lambda functions"
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+          Description: "Allow all outbound traffic"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-lambda-sg"
+
+  # =========================================================================
+  # 2. IAM Roles
+  # =========================================================================
+
+  # -------------------------------------------------------------------------
+  # 2a. ECS Task Execution Role
+  # -------------------------------------------------------------------------
+  EcsTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-ecs-task-execution-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+      Policies:
+        - PolicyName: getEnv
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                Resource: !Sub "arn:aws:s3:::${ProjectName}-backend-env/.env"
+              - Effect: Allow
+                Action:
+                  - "s3:GetBucketLocation"
+                Resource: !Sub "arn:aws:s3:::${ProjectName}-backend-env/"
+        - PolicyName: getParameters
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "ssm:GetParameter"
+                Resource: "*"
+        - PolicyName: getSecrets
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "secretsmanager:GetSecretValue"
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/backend/*"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-ecs-task-execution-role"
+
+  # -------------------------------------------------------------------------
+  # 2b. ECS Task Role
+  # -------------------------------------------------------------------------
+  EcsTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-ecs-task-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "bedrock:InvokeModel"
+                  - "bedrock:InvokeModelWithResponseStream"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "bedrock:Retrieve"
+                  - "bedrock:StartIngestionJob"
+                  - "bedrock:GetIngestionJob"
+                Resource: !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*"
+        - PolicyName: S3KnowledgeBase
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:DeleteObject"
+                  - "s3:ListBucket"
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectName}-multimedia-kb"
+                  - !Sub "arn:aws:s3:::${ProjectName}-multimedia-kb/*"
+        - PolicyName: S3AppBucket
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:DeleteObject"
+                Resource: !Sub "arn:aws:s3:::${ProjectName}-backend-bucket/media/*"
+        - PolicyName: EFS-Access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "elasticfilesystem:ClientMount"
+                  - "elasticfilesystem:ClientWrite"
+                  - "elasticfilesystem:DescribeMountTargets"
+                Resource: !Sub "arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/*"
+        - PolicyName: enableEcsExec
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "ssmmessages:CreateControlChannel"
+                  - "ssmmessages:CreateDataChannel"
+                  - "ssmmessages:OpenControlChannel"
+                  - "ssmmessages:OpenDataChannel"
+                Resource: "*"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-ecs-task-role"
+
+  # -------------------------------------------------------------------------
+  # 2c. Lambda Execution Role
+  # -------------------------------------------------------------------------
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-lambda-healthcheck-execution-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+      Policies:
+        - PolicyName: additionalPermissions
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "bedrock:ListFoundationModels"
+                  - "bedrock:GetKnowledgeBase"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "ecs:ListServices"
+                  - "ecs:DescribeServices"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "elasticfilesystem:ClientMount"
+                  - "elasticfilesystem:ClientWrite"
+                Resource: !Sub "arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/*"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-lambda-healthcheck-execution-role"
+
+  # -------------------------------------------------------------------------
+  # 2d. RDS Enhanced Monitoring Role
+  # -------------------------------------------------------------------------
+  RdsMonitoringRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-rds-monitoring-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: monitoring.rds.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rds-monitoring-role"
+
+  # -------------------------------------------------------------------------
+  # 2e. AWS Backup Service Role
+  # -------------------------------------------------------------------------
+  BackupServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-backup-service-role"
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: backup.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
+        - "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+        - "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Restore"
+        - "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-backup-service-role"
+
+  # =========================================================================
+  # 3. KMS Keys
+  # =========================================================================
+
+  # -------------------------------------------------------------------------
+  # 3a. RDS KMS Key
+  # -------------------------------------------------------------------------
+  KmsRdsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "Encrypts RDS database volumes"
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowRootAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: AllowRdsService
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Action:
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:CreateGrant"
+              - "kms:ListGrants"
+              - "kms:DescribeKey"
+            Resource: "*"
+            Condition:
+              StringEquals:
+                kms:CallerAccount: !Ref AWS::AccountId
+                kms:ViaService: !Sub "rds.${AWS::Region}.amazonaws.com"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-kms-rds"
+
+  # -------------------------------------------------------------------------
+  # 3b. EFS KMS Key
+  # -------------------------------------------------------------------------
+  KmsEfsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "Encrypts EFS filesystems"
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowRootAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: AllowEfsService
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Action:
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:CreateGrant"
+              - "kms:ListGrants"
+              - "kms:DescribeKey"
+            Resource: "*"
+            Condition:
+              StringEquals:
+                kms:CallerAccount: !Ref AWS::AccountId
+                kms:ViaService: !Sub "elasticfilesystem.${AWS::Region}.amazonaws.com"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-kms-efs"
+
+  # -------------------------------------------------------------------------
+  # 3c. Backup KMS Key
+  # -------------------------------------------------------------------------
+  KmsBackupKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "Encrypts Backup vault"
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowRootAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: AllowBackupService
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Action:
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:CreateGrant"
+              - "kms:ListGrants"
+              - "kms:DescribeKey"
+            Resource: "*"
+            Condition:
+              StringEquals:
+                kms:CallerAccount: !Ref AWS::AccountId
+                kms:ViaService: !Sub "backup.${AWS::Region}.amazonaws.com"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-kms-backup"
+
+  # =========================================================================
+  # 4. RDS Subnet Group
+  # =========================================================================
+  RdsSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub "${ProjectName}-rds-subnet-group"
+      DBSubnetGroupDescription: !Sub "Subnet group for ${ProjectName} RDS instances"
+      SubnetIds:
+        - !Ref DatabaseSubnet1Id
+        - !Ref DatabaseSubnet2Id
+        - !Ref DatabaseSubnet3Id
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rds-subnet-group"
+
+  # =========================================================================
+  # 5. AWS Backup — Vault, Plan, Selection
+  # =========================================================================
+
+  # -------------------------------------------------------------------------
+  # 5a. Backup Vault
+  # -------------------------------------------------------------------------
+  BackupVault:
+    Type: AWS::Backup::BackupVault
+    Properties:
+      BackupVaultName: !Sub "${ProjectName}-vault"
+      EncryptionKeyArn: !GetAtt KmsBackupKey.Arn
+
+  # -------------------------------------------------------------------------
+  # 5b. Backup Plan
+  # -------------------------------------------------------------------------
+  BackupPlan:
+    Type: AWS::Backup::BackupPlan
+    Properties:
+      BackupPlan:
+        BackupPlanName: !Sub "${ProjectName}-backup"
+        BackupPlanRule:
+          - RuleName: DailyBackup
+            ScheduleExpression: "cron(30 0 ? * * *)"
+            ScheduleExpressionTimezone: "Asia/Saigon"
+            Lifecycle:
+              DeleteAfterDays: 35
+            EnableContinuousBackup: true
+            TargetBackupVault: !Ref BackupVault
+        AdvancedBackupSettings:
+          - ResourceType: S3
+            BackupOptions:
+              BackupObjectTags: enabled
+              BackupACLs: enabled
+
+  # -------------------------------------------------------------------------
+  # 5c. Backup Selection
+  # -------------------------------------------------------------------------
+  BackupSelection:
+    Type: AWS::Backup::BackupSelection
+    Properties:
+      BackupPlanId: !Ref BackupPlan
+      BackupSelection:
+        SelectionName: !Sub "${ProjectName}-backup-resources"
+        IamRoleArn: !GetAtt BackupServiceRole.Arn
+        Resources:
+          - !Sub "arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/*"
+          - !Sub "arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${ProjectName}-database"
+          - !Sub "arn:aws:s3:::${ProjectName}-app-bucket"
+          - !Sub "arn:aws:s3:::${ProjectName}-backend-env"
+          - !Sub "arn:aws:s3:::${ProjectName}-frontend-bucket"
+          - !Sub "arn:aws:s3:::${ProjectName}-kb-source"
+          - !Sub "arn:aws:s3:::${ProjectName}-multimedia-kb"
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  AlbSecurityGroupId:
+    Description: "Security group ID for the internal ALB"
+    Value: !Ref AlbSecurityGroup
+    Export:
+      Name: !Sub "${ProjectName}-AlbSecurityGroupId"
+
+  EcsSecurityGroupId:
+    Description: "Security group ID for ECS tasks"
+    Value: !Ref EcsSecurityGroup
+    Export:
+      Name: !Sub "${ProjectName}-EcsSecurityGroupId"
+
+  RdsSecurityGroupId:
+    Description: "Security group ID for RDS database"
+    Value: !Ref RdsSecurityGroup
+    Export:
+      Name: !Sub "${ProjectName}-RdsSecurityGroupId"
+
+  RedisSecurityGroupId:
+    Description: "Security group ID for Redis cluster"
+    Value: !Ref RedisSecurityGroup
+    Export:
+      Name: !Sub "${ProjectName}-RedisSecurityGroupId"
+
+  EfsSecurityGroupId:
+    Description: "Security group ID for EFS filesystem"
+    Value: !Ref EfsSecurityGroup
+    Export:
+      Name: !Sub "${ProjectName}-EfsSecurityGroupId"
+
+  LambdaSecurityGroupId:
+    Description: "Security group ID for Lambda functions"
+    Value: !Ref LambdaSecurityGroup
+    Export:
+      Name: !Sub "${ProjectName}-LambdaSecurityGroupId"
+
+  EcsTaskExecutionRoleArn:
+    Description: "ARN of the ECS task execution role"
+    Value: !GetAtt EcsTaskExecutionRole.Arn
+    Export:
+      Name: !Sub "${ProjectName}-EcsTaskExecutionRoleArn"
+
+  EcsTaskRoleArn:
+    Description: "ARN of the ECS task role"
+    Value: !GetAtt EcsTaskRole.Arn
+    Export:
+      Name: !Sub "${ProjectName}-EcsTaskRoleArn"
+
+  LambdaExecutionRoleArn:
+    Description: "ARN of the Lambda execution role"
+    Value: !GetAtt LambdaExecutionRole.Arn
+    Export:
+      Name: !Sub "${ProjectName}-LambdaExecutionRoleArn"
+
+  RdsMonitoringRoleArn:
+    Description: "ARN of the RDS enhanced monitoring role"
+    Value: !GetAtt RdsMonitoringRole.Arn
+    Export:
+      Name: !Sub "${ProjectName}-RdsMonitoringRoleArn"
+
+  BackupRoleArn:
+    Description: "ARN of the AWS Backup service role"
+    Value: !GetAtt BackupServiceRole.Arn
+    Export:
+      Name: !Sub "${ProjectName}-BackupRoleArn"
+
+  BackupVaultName:
+    Description: "Name of the AWS Backup vault"
+    Value: !Ref BackupVault
+    Export:
+      Name: !Sub "${ProjectName}-BackupVaultName"
+
+  BackupPlanId:
+    Description: "ID of the AWS Backup plan"
+    Value: !Ref BackupPlan
+    Export:
+      Name: !Sub "${ProjectName}-BackupPlanId"
+
+  RdsSubnetGroupName:
+    Description: "Name of the RDS DB subnet group"
+    Value: !Ref RdsSubnetGroup
+    Export:
+      Name: !Sub "${ProjectName}-RdsSubnetGroupName"
+
+  KmsRdsKeyArn:
+    Description: "ARN of the KMS key for RDS encryption"
+    Value: !GetAtt KmsRdsKey.Arn
+    Export:
+      Name: !Sub "${ProjectName}-KmsRdsKeyArn"
+
+  KmsEfsKeyArn:
+    Description: "ARN of the KMS key for EFS encryption"
+    Value: !GetAtt KmsEfsKey.Arn
+    Export:
+      Name: !Sub "${ProjectName}-KmsEfsKeyArn"
+
+  KmsBackupKeyArn:
+    Description: "ARN of the KMS key for Backup encryption"
+    Value: !GetAtt KmsBackupKey.Arn
+    Export:
+      Name: !Sub "${ProjectName}-KmsBackupKeyArn"

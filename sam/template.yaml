@@ -1,0 +1,249 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  Parallel SAM stack. Orchestrates local nested applications
+  for network, security, data, compute, and edge while leaving the original
+  CloudFormation stack unchanged.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Description: "Project name used as prefix for all SAM-managed resource names. Use a value that does not collide with existing stacks."
+
+  VpcCidr:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: "CIDR block for the VPC"
+
+  RdsMasterUsername:
+    Type: String
+    Default: postgres
+    Description: "Master username for RDS PostgreSQL"
+    MinLength: 1
+    MaxLength: 63
+
+  RdsMasterPassword:
+    Type: String
+    NoEcho: true
+    Description: "Master password for RDS PostgreSQL (min 8 characters)"
+    MinLength: 8
+    MaxLength: 128
+
+  EnableRdsSsl:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: "Enable SSL enforcement on RDS PostgreSQL"
+
+  CreateOpenSearchCollection:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: "Create OpenSearch Serverless collection for Bedrock KB (adds significant monthly cost)"
+
+  DomainName:
+    Type: String
+    Default: ""
+    Description: "Optional custom domain name for CloudFront. Leave empty to use the CloudFront domain."
+
+  AcmCertificateArn:
+    Type: String
+    Default: ""
+    Description: "Optional ACM certificate ARN in us-east-1 for CloudFront HTTPS"
+
+  HostedZoneId:
+    Type: String
+    Default: ""
+    Description: "Optional Route 53 Hosted Zone ID. Used only when DomainName and AcmCertificateArn are set."
+
+  ContainerImage:
+    Type: String
+    Default: ""
+    Description: "ECR image URI. If empty, defaults to {account}.dkr.ecr.{region}.amazonaws.com/{ProjectName}/backend:latest"
+
+  HealthCheckUrl:
+    Type: String
+    Default: ""
+    Description: "Optional URL for the Lambda health checker to probe instead of the internal ALB URL"
+
+Conditions:
+  ShouldCreateOpenSearch: !Equals [!Ref CreateOpenSearchCollection, "true"]
+  HasCustomDomain: !And
+    - !Not [!Equals [!Ref DomainName, ""]]
+    - !Not [!Equals [!Ref AcmCertificateArn, ""]]
+
+Resources:
+  NetworkStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: sections/network.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        VpcCidr: !Ref VpcCidr
+      Tags:
+        Name: !Sub "${ProjectName}-network-stack"
+        Project: !Ref ProjectName
+        ManagedBy: SAM
+
+  SecurityStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: sections/security.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
+        PrivateSubnet1Id: !GetAtt NetworkStack.Outputs.PrivateSubnet1Id
+        PrivateSubnet2Id: !GetAtt NetworkStack.Outputs.PrivateSubnet2Id
+        PrivateSubnet3Id: !GetAtt NetworkStack.Outputs.PrivateSubnet3Id
+        DatabaseSubnet1Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet1Id
+        DatabaseSubnet2Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet2Id
+        DatabaseSubnet3Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet3Id
+      Tags:
+        Name: !Sub "${ProjectName}-security-stack"
+        Project: !Ref ProjectName
+        ManagedBy: SAM
+
+  DataStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: sections/data.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
+        PrivateSubnet1Id: !GetAtt NetworkStack.Outputs.PrivateSubnet1Id
+        PrivateSubnet2Id: !GetAtt NetworkStack.Outputs.PrivateSubnet2Id
+        PrivateSubnet3Id: !GetAtt NetworkStack.Outputs.PrivateSubnet3Id
+        DatabaseSubnet1Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet1Id
+        DatabaseSubnet2Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet2Id
+        DatabaseSubnet3Id: !GetAtt NetworkStack.Outputs.DatabaseSubnet3Id
+        RdsSecurityGroupId: !GetAtt SecurityStack.Outputs.RdsSecurityGroupId
+        RedisSecurityGroupId: !GetAtt SecurityStack.Outputs.RedisSecurityGroupId
+        EfsSecurityGroupId: !GetAtt SecurityStack.Outputs.EfsSecurityGroupId
+        RdsSubnetGroupName: !GetAtt SecurityStack.Outputs.RdsSubnetGroupName
+        RdsMonitoringRoleArn: !GetAtt SecurityStack.Outputs.RdsMonitoringRoleArn
+        KmsRdsKeyArn: !GetAtt SecurityStack.Outputs.KmsRdsKeyArn
+        KmsEfsKeyArn: !GetAtt SecurityStack.Outputs.KmsEfsKeyArn
+        RdsMasterUsername: !Ref RdsMasterUsername
+        RdsMasterPassword: !Ref RdsMasterPassword
+        EnableRdsSsl: !Ref EnableRdsSsl
+      Tags:
+        Name: !Sub "${ProjectName}-data-stack"
+        Project: !Ref ProjectName
+        ManagedBy: SAM
+
+  BedrockStack:
+    Type: AWS::Serverless::Application
+    Condition: ShouldCreateOpenSearch
+    DependsOn: DataStack
+    Properties:
+      Location: sections/bedrock.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+      Tags:
+        Name: !Sub "${ProjectName}-bedrock-stack"
+        Project: !Ref ProjectName
+        ManagedBy: SAM
+
+  ComputeStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: sections/compute.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
+        PrivateSubnet1Id: !GetAtt NetworkStack.Outputs.PrivateSubnet1Id
+        PrivateSubnet2Id: !GetAtt NetworkStack.Outputs.PrivateSubnet2Id
+        PrivateSubnet3Id: !GetAtt NetworkStack.Outputs.PrivateSubnet3Id
+        AlbSecurityGroupId: !GetAtt SecurityStack.Outputs.AlbSecurityGroupId
+        EcsSecurityGroupId: !GetAtt SecurityStack.Outputs.EcsSecurityGroupId
+        LambdaSecurityGroupId: !GetAtt SecurityStack.Outputs.LambdaSecurityGroupId
+        EcsTaskExecutionRoleArn: !GetAtt SecurityStack.Outputs.EcsTaskExecutionRoleArn
+        EcsTaskRoleArn: !GetAtt SecurityStack.Outputs.EcsTaskRoleArn
+        LambdaExecutionRoleArn: !GetAtt SecurityStack.Outputs.LambdaExecutionRoleArn
+        EfsFileSystemId: !GetAtt DataStack.Outputs.EfsFileSystemId
+        EfsAccessPointId: !GetAtt DataStack.Outputs.EfsAccessPointId
+        EfsHealthCheckAccessPointId: !GetAtt DataStack.Outputs.EfsHealthCheckAccessPointId
+        RdsEndpoint: !GetAtt DataStack.Outputs.RdsEndpoint
+        RdsPort: !GetAtt DataStack.Outputs.RdsPort
+        RedisEndpoint: !GetAtt DataStack.Outputs.RedisEndpoint
+        RedisPort: !GetAtt DataStack.Outputs.RedisPort
+        KnowledgeBaseId: !If
+          - ShouldCreateOpenSearch
+          - !GetAtt BedrockStack.Outputs.KnowledgeBaseId
+          - ""
+        ContainerImage: !Ref ContainerImage
+        HealthCheckUrl: !Ref HealthCheckUrl
+      Tags:
+        Name: !Sub "${ProjectName}-compute-stack"
+        Project: !Ref ProjectName
+        ManagedBy: SAM
+
+  EdgeStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: sections/edge.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        DomainName: !Ref DomainName
+        AcmCertificateArn: !Ref AcmCertificateArn
+        AlbArn: !GetAtt ComputeStack.Outputs.AlbArn
+        AlbDnsName: !GetAtt ComputeStack.Outputs.AlbDnsName
+        ApiGatewayId: !GetAtt ComputeStack.Outputs.ApiGatewayId
+        ApiGatewayInvokeUrl: !GetAtt ComputeStack.Outputs.ApiGatewayInvokeUrl
+        FrontendBucketDomainName: !GetAtt DataStack.Outputs.FrontendBucketDomainName
+        HostedZoneId: !Ref HostedZoneId
+      Tags:
+        Name: !Sub "${ProjectName}-edge-stack"
+        Project: !Ref ProjectName
+        ManagedBy: SAM
+
+Outputs:
+  VpcId:
+    Description: "VPC ID"
+    Value: !GetAtt NetworkStack.Outputs.VpcId
+
+  RdsEndpoint:
+    Description: "RDS PostgreSQL endpoint"
+    Value: !GetAtt DataStack.Outputs.RdsEndpoint
+
+  RedisEndpoint:
+    Description: "ElastiCache Redis endpoint"
+    Value: !GetAtt DataStack.Outputs.RedisEndpoint
+
+  KnowledgeBaseId:
+    Condition: ShouldCreateOpenSearch
+    Description: "Bedrock Knowledge Base ID"
+    Value: !GetAtt BedrockStack.Outputs.KnowledgeBaseId
+
+  EcsClusterArn:
+    Description: "ECS Cluster ARN"
+    Value: !GetAtt ComputeStack.Outputs.EcsClusterArn
+
+  EcrRepositoryUri:
+    Description: "ECR Repository URI - push your container image here"
+    Value: !GetAtt ComputeStack.Outputs.EcrRepositoryUri
+
+  AlbDnsName:
+    Description: "Internal ALB DNS name"
+    Value: !GetAtt ComputeStack.Outputs.AlbDnsName
+
+  ApiGatewayInvokeUrl:
+    Description: "API Gateway invoke URL for health checks"
+    Value: !GetAtt ComputeStack.Outputs.ApiGatewayInvokeUrl
+
+  CloudFrontDistributionId:
+    Description: "CloudFront Distribution ID"
+    Value: !GetAtt EdgeStack.Outputs.CloudFrontDistributionId
+
+  CloudFrontDomainName:
+    Description: "CloudFront domain name"
+    Value: !GetAtt EdgeStack.Outputs.CloudFrontDomainName
+
+  ApplicationUrl:
+    Description: "Application URL"
+    Value: !If
+      - HasCustomDomain
+      - !Sub "https://${DomainName}"
+      - !Sub
+        - "https://${DistributionDomain}"
+        - DistributionDomain: !GetAtt EdgeStack.Outputs.CloudFrontDomainName

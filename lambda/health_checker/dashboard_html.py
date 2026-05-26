@@ -1,0 +1,617 @@
+DASHBOARD_HTML = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ai_agent — Health Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --bg-card: rgba(255,255,255,0.04);
+    --bg-card-hover: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.14);
+    --text: #e4e4e7;
+    --text-muted: #71717a;
+    --text-dim: #52525b;
+    --healthy: #22c55e;
+    --healthy-bg: rgba(34,197,94,0.1);
+    --healthy-border: rgba(34,197,94,0.25);
+    --unhealthy: #ef4444;
+    --unhealthy-bg: rgba(239,68,68,0.1);
+    --unhealthy-border: rgba(239,68,68,0.25);
+    --degraded: #f59e0b;
+    --degraded-bg: rgba(245,158,11,0.1);
+    --degraded-border: rgba(245,158,11,0.25);
+    --skipped: #6366f1;
+    --skipped-bg: rgba(99,102,241,0.1);
+    --skipped-border: rgba(99,102,241,0.25);
+    --accent: #3b82f6;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 16px; }
+
+  .logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .header h1 span { color: var(--text-muted); font-weight: 400; }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .refresh-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .refresh-btn:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-hover);
+    color: var(--text);
+  }
+
+  .refresh-btn.loading svg { animation: spin 0.8s linear infinite; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .auto-refresh {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .status-banner {
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    border: 1px solid;
+    transition: all 0.3s;
+  }
+
+  .status-banner.healthy {
+    background: var(--healthy-bg);
+    border-color: var(--healthy-border);
+  }
+
+  .status-banner.degraded {
+    background: var(--degraded-bg);
+    border-color: var(--degraded-border);
+  }
+
+  .status-banner.unhealthy {
+    background: var(--unhealthy-bg);
+    border-color: var(--unhealthy-border);
+  }
+
+  .status-banner.loading {
+    background: var(--bg-card);
+    border-color: var(--border);
+  }
+
+  .status-info { display: flex; align-items: center; gap: 14px; }
+
+  .status-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .status-dot::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    opacity: 0.3;
+  }
+
+  .healthy .status-dot { background: var(--healthy); }
+  .healthy .status-dot::after { background: var(--healthy); animation: pulse-green 2s infinite; }
+  .degraded .status-dot { background: var(--degraded); }
+  .degraded .status-dot::after { background: var(--degraded); animation: pulse-yellow 2s infinite; }
+  .unhealthy .status-dot { background: var(--unhealthy); }
+  .unhealthy .status-dot::after { background: var(--unhealthy); animation: pulse-red 1.5s infinite; }
+
+  @keyframes pulse-green { 0%, 100% { opacity: 0; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.4); } }
+  @keyframes pulse-yellow { 0%, 100% { opacity: 0; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.4); } }
+  @keyframes pulse-red { 0%, 100% { opacity: 0; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.5); } }
+
+  .status-label {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .status-meta {
+    display: flex;
+    gap: 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .status-meta span { white-space: nowrap; }
+
+  .checks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+
+  .check-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .check-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+  }
+
+  .check-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    transition: background 0.3s;
+  }
+
+  .check-card.healthy::before { background: var(--healthy); }
+  .check-card.unhealthy::before { background: var(--unhealthy); }
+  .check-card.degraded::before { background: var(--degraded); }
+  .check-card.skipped::before { background: var(--skipped); }
+
+  .check-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .check-name {
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .check-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+  }
+
+  .check-badge {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .check-card.healthy .check-badge { color: var(--healthy); background: var(--healthy-bg); }
+  .check-card.unhealthy .check-badge { color: var(--unhealthy); background: var(--unhealthy-bg); }
+  .check-card.degraded .check-badge { color: var(--degraded); background: var(--degraded-bg); }
+  .check-card.skipped .check-badge { color: var(--skipped); background: var(--skipped-bg); }
+
+  .check-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .check-detail {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+
+  .check-detail-label { color: var(--text-dim); }
+  .check-detail-value { color: var(--text-muted); font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 11px; }
+
+  .latency-bar {
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.06);
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .latency-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .latency-fast { background: var(--healthy); }
+  .latency-medium { background: var(--degraded); }
+  .latency-slow { background: var(--unhealthy); }
+
+  .ecs-services {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ecs-svc {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+  }
+
+  .ecs-svc-name {
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 160px;
+  }
+
+  .ecs-svc-count {
+    font-family: 'SF Mono', 'Cascadia Code', monospace;
+    color: var(--text-dim);
+  }
+
+  .ecs-svc-count.ok { color: var(--healthy); }
+  .ecs-svc-count.bad { color: var(--unhealthy); }
+
+  .check-error {
+    font-size: 11px;
+    color: var(--unhealthy);
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: var(--unhealthy-bg);
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Cascadia Code', monospace;
+    word-break: break-all;
+    line-height: 1.4;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--bg-card) 25%, rgba(255,255,255,0.06) 50%, var(--bg-card) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius);
+    height: 120px;
+  }
+
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  .footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 600px) {
+    .container { padding: 24px 16px 40px; }
+    .header h1 { font-size: 18px; }
+    .checks-grid { grid-template-columns: 1fr; }
+    .status-banner { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">A</div>
+      <h1>ai_agent <span>/ health</span></h1>
+    </div>
+    <div class="header-right">
+      <span class="auto-refresh" id="countdown"></span>
+      <button class="refresh-btn" id="refreshBtn" onclick="fetchHealth()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="status-banner loading" id="statusBanner">
+    <div class="status-info">
+      <div class="status-dot"></div>
+      <div class="status-label" id="statusLabel">Loading...</div>
+    </div>
+    <div class="status-meta" id="statusMeta"></div>
+  </div>
+
+  <div class="checks-grid" id="checksGrid">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+
+  <div class="footer">
+    Powered by AWS Lambda &middot; auto-refreshes every 30s
+  </div>
+</div>
+
+<script>
+const REFRESH_INTERVAL = 30;
+const CHECK_ICONS = {
+  database: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>',
+  redis: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M10 12h.01"/></svg>',
+  bedrock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
+  bedrock_kb: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
+  efs: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+  main_app: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+  ecs_services: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/></svg>',
+};
+
+const CHECK_LABELS = {
+  database: 'Database',
+  redis: 'Redis',
+  bedrock: 'Bedrock',
+  bedrock_kb: 'Knowledge Base',
+  efs: 'EFS Storage',
+  main_app: 'Main App',
+  ecs_services: 'ECS Services',
+};
+
+let countdown = REFRESH_INTERVAL;
+let timer = null;
+
+function startCountdown() {
+  clearInterval(timer);
+  countdown = REFRESH_INTERVAL;
+  timer = setInterval(() => {
+    countdown--;
+    document.getElementById('countdown').textContent = `${countdown}s`;
+    if (countdown <= 0) {
+      fetchHealth();
+    }
+  }, 1000);
+}
+
+function latencyClass(ms) {
+  if (ms < 500) return 'latency-fast';
+  if (ms < 2000) return 'latency-medium';
+  return 'latency-slow';
+}
+
+function latencyWidth(ms) {
+  return Math.min(100, (ms / 3000) * 100);
+}
+
+function renderCheckDetails(name, data) {
+  let html = '';
+
+  if (data.latency_ms !== undefined) {
+    html += `<div class="check-detail">
+      <span class="check-detail-label">Latency</span>
+      <span class="check-detail-value">${data.latency_ms.toFixed(1)} ms</span>
+    </div>`;
+    html += `<div class="latency-bar">
+      <div class="latency-fill ${latencyClass(data.latency_ms)}" style="width:${latencyWidth(data.latency_ms)}%"></div>
+    </div>`;
+  }
+
+  if (data.type) {
+    html += `<div class="check-detail">
+      <span class="check-detail-label">Type</span>
+      <span class="check-detail-value">${data.type}</span>
+    </div>`;
+  }
+
+  if (data.region) {
+    html += `<div class="check-detail">
+      <span class="check-detail-label">Region</span>
+      <span class="check-detail-value">${data.region}</span>
+    </div>`;
+  }
+
+  if (data.available_models !== undefined) {
+    html += `<div class="check-detail">
+      <span class="check-detail-label">Models</span>
+      <span class="check-detail-value">${data.available_models}</span>
+    </div>`;
+  }
+
+  if (data.kb_status) {
+    html += `<div class="check-detail">
+      <span class="check-detail-label">KB Status</span>
+      <span class="check-detail-value">${data.kb_status}</span>
+    </div>`;
+  }
+
+  if (data.knowledge_base_id) {
+    html += `<div class="check-detail">
+      <span class="check-detail-label">KB ID</span>
+      <span class="check-detail-value">${data.knowledge_base_id}</span>
+    </div>`;
+  }
+
+  if (data.mount) {
+    html += `<div class="check-detail">
+      <span class="check-detail-label">Mount</span>
+      <span class="check-detail-value">${data.mount}</span>
+    </div>`;
+  }
+
+  if (data.app_status) {
+    html += `<div class="check-detail">
+      <span class="check-detail-label">App Status</span>
+      <span class="check-detail-value">${data.app_status}</span>
+    </div>`;
+  }
+
+  if (data.reason) {
+    html += `<div class="check-detail">
+      <span class="check-detail-label">Reason</span>
+      <span class="check-detail-value">${data.reason}</span>
+    </div>`;
+  }
+
+  if (name === 'ecs_services' && data.services) {
+    html += '<div class="ecs-services">';
+    for (const [svcName, svc] of Object.entries(data.services)) {
+      const ok = svc.status === 'healthy';
+      html += `<div class="ecs-svc">
+        <span class="ecs-svc-name" title="${svcName}">${svcName}</span>
+        <span class="ecs-svc-count ${ok ? 'ok' : 'bad'}">${svc.running}/${svc.desired}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  if (data.error) {
+    html += `<div class="check-error">${data.error}</div>`;
+  }
+
+  return html;
+}
+
+function render(data) {
+  const banner = document.getElementById('statusBanner');
+  banner.className = `status-banner ${data.status}`;
+
+  const statusText = {
+    healthy: 'All Systems Operational',
+    degraded: 'Partial System Outage',
+    unhealthy: 'Major System Outage',
+  };
+  document.getElementById('statusLabel').textContent = statusText[data.status] || data.status;
+
+  const ts = new Date(data.timestamp);
+  const checksCount = Object.keys(data.checks).length;
+  const healthyCount = Object.values(data.checks).filter(c => c.status === 'healthy').length;
+  document.getElementById('statusMeta').innerHTML =
+    `<span>${healthyCount}/${checksCount} checks passing</span>` +
+    `<span>Updated ${ts.toLocaleTimeString()}</span>`;
+
+  const grid = document.getElementById('checksGrid');
+  grid.innerHTML = '';
+
+  for (const [name, check] of Object.entries(data.checks)) {
+    const card = document.createElement('div');
+    card.className = `check-card ${check.status}`;
+    card.innerHTML = `
+      <div class="check-header">
+        <div class="check-name">
+          <span class="check-icon">${CHECK_ICONS[name] || ''}</span>
+          ${CHECK_LABELS[name] || name}
+        </div>
+        <span class="check-badge">${check.status}</span>
+      </div>
+      <div class="check-details">
+        ${renderCheckDetails(name, check)}
+      </div>`;
+    grid.appendChild(card);
+  }
+}
+
+async function fetchHealth() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('loading');
+
+  try {
+    const resp = await fetch('https://aws.hungtran.id.vn/health', {
+      headers: { 'x-api-key': 'KSOWFTPkeD765gTn53LWN39IXuoEB4t62iEI65dN' },
+    });
+    const wrapper = await resp.json();
+    const data = typeof wrapper.body === 'string' ? JSON.parse(wrapper.body) : wrapper;
+    render(data);
+  } catch (e) {
+    document.getElementById('statusLabel').textContent = 'Failed to fetch health data';
+    document.getElementById('statusBanner').className = 'status-banner unhealthy';
+    document.getElementById('statusMeta').innerHTML = `<span>${e.message}</span>`;
+  } finally {
+    btn.classList.remove('loading');
+    startCountdown();
+  }
+}
+
+fetchHealth();
+</script>
+</body>
+</html>
+"""

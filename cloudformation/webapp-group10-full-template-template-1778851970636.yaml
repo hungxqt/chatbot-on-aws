@@ -1,0 +1,3410 @@
+---
+Metadata:
+  AWSToolsMetrics:
+    IaC_Generator: "arn:aws:cloudformation:us-east-1:379353384462:generatedTemplate/6e3d7684-3476-4100-b268-d3d4d902f4a9"
+Parameters:
+  LambdaFunctionWebappgroup10lambdahealthCheckCodeS3Bucket4pClU:
+    NoEcho: "true"
+    Type: "String"
+    Description: "An Amazon S3 bucket in the same AWS-Region as your function. The\
+      \ bucket can be in a different AWS-account."
+  LambdaFunctionWebappgroup10lambdahealthCheckCodeZipFile1GxeL:
+    NoEcho: "true"
+    Type: "String"
+    Description: "(Node.js and Python) The source code of your Lambda function. If\
+      \ you include your function source inline with this parameter, CFN places it\
+      \ in a file named ``index`` and zips it to create a [deployment package](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-package.html).\
+      \ This zip file cannot exceed 4MB. For the ``Handler`` property, the first part\
+      \ of the handler identifier must be ``index``. For example, ``index.handler``.\n\
+      \  When you specify source code inline for a Node.js function, the ``index``\
+      \ file that CFN creates uses the extension ``.js``. This means that Node.js\
+      \ treats the file as a CommonJS module.\n When using Node.js 24 or later, Node.js\
+      \ can automatically detect if a ``.js`` file should be treated as CommonJS or\
+      \ as an ES module. To enable auto-detection, add the ``--experimental-detect-module``\
+      \ flag to the ``NODE_OPTIONS`` environment variable. For more information, see\
+      \ [Experimental Node.js features](https://docs.aws.amazon.com//lambda/latest/dg/lambda-nodejs.html#nodejs-experimental-features).\n\
+      \   For JSON, you must escape quotes and special characters such as newline\
+      \ (``\\n``) with a backslash.\n If you specify a function that interacts with\
+      \ an AWS CloudFormation custom resource, you don't have to write your own functions\
+      \ to send responses to the custom resource that invoked the function. AWS CloudFormation\
+      \ provides a response module ([cfn-response](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-lambda-function-code-cfnresponsemodule.html))\
+      \ that simplifies sending responses. See [Using Lambda with CloudFormation](https://docs.aws.amazon.com/lambda/latest/dg/services-cloudformation.html)\
+      \ for details."
+  LambdaFunctionWebappgroup10lambdahealthCheckCodeImageUri4WyoH:
+    NoEcho: "true"
+    Type: "String"
+    Description: "URI of a [container image](https://docs.aws.amazon.com/lambda/latest/dg/lambda-images.html)\
+      \ in the Amazon ECR registry."
+  LambdaFunctionWebappgroup10lambdahealthCheckCodeSourceKMSKeyArnz0NLO:
+    NoEcho: "true"
+    Type: "String"
+    Description: "The ARN of the KMSlong (KMS) customer managed key that's used to\
+      \ encrypt your function's .zip deployment package. If you don't provide a customer\
+      \ managed key, Lambda uses an [owned key](https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#aws-owned-cmk)."
+  LambdaFunctionWebappgroup10lambdahealthCheckCodeS3KeyUzjy2:
+    NoEcho: "true"
+    Type: "String"
+    Description: "The Amazon S3 key of the deployment package."
+  LambdaFunctionWebappgroup10lambdahealthCheckCodeS3ObjectVersionFbz9P:
+    NoEcho: "true"
+    Type: "String"
+    Description: "For versioned objects, the version of the deployment package object\
+      \ to use."
+Resources:
+  EC2FlowLog:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::FlowLog"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogFormat: "${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport}\
+        \ ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}\
+        \ ${ecs-cluster-name} ${ecs-cluster-arn} ${ecs-container-instance-id} ${ecs-container-instance-arn}\
+        \ ${ecs-service-name} ${ecs-task-definition-arn} ${ecs-task-id} ${ecs-task-arn}\
+        \ ${ecs-container-id} ${ecs-second-container-id}"
+      ResourceId: "vpc-0d41df79a62c6e29f"
+      MaxAggregationInterval: 60
+      ResourceType: "VPC"
+      LogGroupName: "webapp-group10-vpc-flow-logs"
+      DeliverLogsPermissionArn: "arn:aws:iam::379353384462:role/service-role/webapp-grouip10-VPCFlowLogs-Cloudwatch"
+      LogDestinationType: "cloud-watch-logs"
+      Tags:
+      - Value: "webapp-group10-vpc"
+        Key: "Name"
+      TrafficType: "ALL"
+  LogsLogStreamBedrockknowledgebaseslogs:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "bedrock/knowledgebaseslogs"
+      LogGroupName: "webapp-group10-knowledge-base-logs"
+  ApiGatewayResourceLe:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Resource"
+    DeletionPolicy: "Delete"
+    Properties:
+      ParentId: "m2qoludf4c"
+      PathPart: "health-check"
+      RestApiId: "b5yuv6vqrc"
+  IAMRoleRdsmonitoringrole:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Delete"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+      MaxSessionDuration: 3600
+      RoleName: "rds-monitoring-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "monitoring.rds.amazonaws.com"
+          Sid: ""
+  EC2SubnetNetworkAclAssociation:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-037433560608eddce"
+  ApiGatewayResourceEK:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Resource"
+    DeletionPolicy: "Delete"
+    Properties:
+      ParentId: "m2qoludf4c"
+      PathPart: "health"
+      RestApiId: "b5yuv6vqrc"
+  ElastiCacheServerlessCacheWebappgroup10reddis:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ElastiCache::ServerlessCache"
+    DeletionPolicy: "Delete"
+    Properties:
+      SnapshotRetentionLimit: 7
+      Description: " "
+      Endpoint: {}
+      ServerlessCacheName: "webapp-group10-reddis"
+      SecurityGroupIds:
+      - "sg-03fb20d13eaa89842"
+      SubnetIds:
+      - "subnet-0fb7a267051a465ee"
+      - "subnet-0148c1ed9dd01ab02"
+      - "subnet-0f2a988b1fc29cd16"
+      DailySnapshotTime: "04:30"
+      MajorEngineVersion: "7"
+      ReaderEndpoint: {}
+      Engine: "redis"
+      Tags: []
+  ApiGatewayApiKey:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::ApiKey"
+    DeletionPolicy: "Delete"
+    Properties:
+      StageKeys: []
+      Value: "KSOWFTPkeD765gTn53LWN39IXuoEB4t62iEI65dN"
+      Enabled: true
+      Name: "webapp-group10-lambda-health-check-api-key"
+  S3BucketWebappgroup10backendenv:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Delete"
+    Properties:
+      AbacStatus: "Disabled"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "webapp-group10-backend-env"
+      VersioningConfiguration:
+        Status: "Enabled"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: true
+          BlockedEncryptionTypes:
+            EncryptionType:
+            - "SSE-C"
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+  EC2SubnetNetworkAclAssociationUZ:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-036fb118a237b276c"
+  BackupBackupPlan:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Backup::BackupPlan"
+    DeletionPolicy: "Delete"
+    Properties:
+      BackupPlan:
+        BackupPlanName: "webapp-group10-backup"
+        ScanSettings: []
+        AdvancedBackupSettings:
+        - BackupOptions:
+            BackupObjectTags: "enabled"
+            BackupACLs: "enabled"
+          ResourceType: "S3"
+        BackupPlanRule:
+        - CompletionWindowMinutes: 10080
+          ScheduleExpression: "cron(30 0 ? * * *)"
+          RecoveryPointTags: {}
+          CopyActions: []
+          EnableContinuousBackup: true
+          ScanActions: []
+          Lifecycle:
+            DeleteAfterDays: 35
+          IndexActions: []
+          TargetBackupVault: "webapp-group10-vault"
+          StartWindowMinutes: 480
+          ScheduleExpressionTimezone: "Asia/Saigon"
+          RuleName: "webapp-group10-backup-rule"
+      BackupPlanTags: {}
+  S3BucketWebappgroup10multimediakb:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Delete"
+    Properties:
+      AbacStatus: "Disabled"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "webapp-group10-multimedia-kb"
+      VersioningConfiguration:
+        Status: "Enabled"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: true
+          BlockedEncryptionTypes:
+            EncryptionType:
+            - "SSE-C"
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+  ApiGatewayDeploymentAU:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Deployment"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+  LogsLogStreamEni04e5b6534626740a2all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-04e5b6534626740a2-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  EC2SubnetAZ:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az1"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1a"
+      CidrBlock: "10.0.7.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "webapp-group10-subnet-database1-us-east-1a"
+        Key: "Name"
+  LogsLogStreamEni06b8fc2f7b4159b53all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-06b8fc2f7b4159b53-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  EC2SubnetB8:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az2"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1b"
+      CidrBlock: "10.0.5.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "webapp-group10-subnet-private2-us-east-1b"
+        Key: "Name"
+  LogsLogStreamEni0dad6ef6cc9bfc307all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-0dad6ef6cc9bfc307-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  KMSKeyXn:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::KMS::Key"
+    DeletionPolicy: "Delete"
+    Properties:
+      Origin: "AWS_KMS"
+      MultiRegion: false
+      Description: "Default key that protects my Backup data when no other key is\
+        \ defined"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+        - Condition:
+            StringEquals:
+              kms:CallerAccount: "379353384462"
+              kms:ViaService: "backup.us-east-1.amazonaws.com"
+          Resource: "*"
+          Action:
+          - "kms:CreateGrant"
+          - "kms:Decrypt"
+          - "kms:GenerateDataKey*"
+          Effect: "Allow"
+          Principal:
+            AWS: "*"
+          Sid: "Allow access through Backup for all principals in the account that\
+            \ are authorized to use Backup Storage"
+        - Resource: "*"
+          Action:
+          - "kms:Describe*"
+          - "kms:Get*"
+          - "kms:List*"
+          - "kms:RevokeGrant"
+          Effect: "Allow"
+          Principal:
+            AWS: "arn:aws:iam::379353384462:root"
+          Sid: "Allow direct access to key metadata to the account"
+        Id: "auto-backup-1"
+      KeySpec: "SYMMETRIC_DEFAULT"
+      Enabled: true
+      EnableKeyRotation: true
+      KeyUsage: "ENCRYPT_DECRYPT"
+      Tags: []
+  Route53HostedZone:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Route53::HostedZone"
+    DeletionPolicy: "Delete"
+    Properties:
+      HostedZoneConfig:
+        Comment: ""
+      HostedZoneFeatures:
+        EnableAcceleratedRecovery: false
+      QueryLoggingConfig:
+        CloudWatchLogsLogGroupArn: "arn:aws:logs:us-east-1:379353384462:log-group:/route53/aws-hungtran-id-vn:*"
+      Name: "aws.hungtran.id.vn."
+  CloudFrontVpcOrigin:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::CloudFront::VpcOrigin"
+    DeletionPolicy: "Delete"
+    Properties:
+      Tags: []
+      VpcOriginEndpointConfig:
+        OriginSSLProtocols:
+        - "SSLv3"
+        - "TLSv1"
+        - "TLSv1.1"
+        - "TLSv1.2"
+        HTTPSPort: 443
+        Arn: "arn:aws:elasticloadbalancing:us-east-1:379353384462:loadbalancer/app/webapp-group10-internal-alb/e80e0c8188a63acc"
+        HTTPPort: 8000
+        Name: "webapp-group10-vpc-origin-alb"
+        OriginProtocolPolicy: "http-only"
+  RDSDBInstance:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::RDS::DBInstance"
+    DeletionPolicy: "Delete"
+    Properties:
+      DatabaseInsightsMode: "advanced"
+      StorageEncrypted: true
+      MonitoringRoleArn: "arn:aws:iam::379353384462:role/rds-monitoring-role"
+      AssociatedRoles: []
+      Port: "5432"
+      AdditionalStorageVolumes: []
+      ProcessorFeatures: []
+      StorageThroughput: 0
+      PreferredBackupWindow: "03:17-05:17"
+      MonitoringInterval: 1
+      DBParameterGroupName: "disable-ssl-postgresql-database"
+      NetworkType: "IPV4"
+      DedicatedLogVolume: false
+      CopyTagsToSnapshot: true
+      MultiAZ: true
+      Engine: "postgres"
+      Tags: []
+      PerformanceInsightsKMSKeyId: "arn:aws:kms:us-east-1:379353384462:key/a3dafedb-b38a-429c-a5ba-80e0a4d1f0e0"
+      EngineLifecycleSupport: "open-source-rds-extended-support"
+      LicenseModel: "postgresql-license"
+      EngineVersion: "18.3"
+      StorageType: "io2"
+      KmsKeyId: "arn:aws:kms:us-east-1:379353384462:key/a3dafedb-b38a-429c-a5ba-80e0a4d1f0e0"
+      DBInstanceClass: "db.m7g.large"
+      PerformanceInsightsRetentionPeriod: 465
+      AvailabilityZone: "us-east-1c"
+      OptionGroupName: "default:postgres-18"
+      PreferredMaintenanceWindow: "thu:05:17-thu:05:47"
+      EnablePerformanceInsights: true
+      AutoMinorVersionUpgrade: false
+      DBSubnetGroupName: "webapp-group10-rds-subnet-group"
+      DeletionProtection: true
+      Iops: 3000
+      DBInstanceIdentifier: "webapp-group10-database"
+      AllocatedStorage: "100"
+      BackupTarget: "region"
+      CACertificateIdentifier: "rds-ca-rsa2048-g1"
+      ManageMasterUserPassword: false
+      MasterUserSecret: {}
+      VPCSecurityGroups:
+      - "sg-039525f6c6bb419fa"
+      DBSecurityGroups: []
+      MasterUsername: "postgres"
+      MaxAllocatedStorage: 1000
+      DBName: "postgres"
+      EnableIAMDatabaseAuthentication: false
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 35
+      EnableCloudwatchLogsExports:
+      - "iam-db-auth-error"
+      - "postgresql"
+      - "upgrade"
+  KMSKey:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::KMS::Key"
+    DeletionPolicy: "Delete"
+    Properties:
+      Origin: "AWS_KMS"
+      MultiRegion: false
+      Description: "Default key that protects my EFS filesystems when no other key\
+        \ is defined"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+        - Condition:
+            StringEquals:
+              kms:ViaService: "elasticfilesystem.us-east-1.amazonaws.com"
+              kms:CallerAccount: "379353384462"
+          Resource: "*"
+          Action:
+          - "kms:Encrypt"
+          - "kms:Decrypt"
+          - "kms:ReEncrypt*"
+          - "kms:GenerateDataKey*"
+          - "kms:CreateGrant"
+          - "kms:DescribeKey"
+          Effect: "Allow"
+          Principal:
+            AWS: "*"
+          Sid: "Allow access to EFS for all principals in the account that are authorized\
+            \ to use EFS"
+        - Resource: "*"
+          Action:
+          - "kms:Describe*"
+          - "kms:Get*"
+          - "kms:List*"
+          - "kms:RevokeGrant"
+          Effect: "Allow"
+          Principal:
+            AWS: "arn:aws:iam::379353384462:root"
+          Sid: "Allow direct access to key metadata to the account"
+        Id: "auto-elasticfilesystem-1"
+      KeySpec: "SYMMETRIC_DEFAULT"
+      Enabled: true
+      EnableKeyRotation: false
+      KeyUsage: "ENCRYPT_DECRYPT"
+      Tags: []
+  S3BucketWebappgroup10appbucket:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Delete"
+    Properties:
+      AbacStatus: "Disabled"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "webapp-group10-app-bucket"
+      VersioningConfiguration:
+        Status: "Enabled"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: true
+          BlockedEncryptionTypes:
+            EncryptionType:
+            - "SSE-C"
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+  IAMRoleWebappgrouip10VPCFlowLogsCloudwatch:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Delete"
+    Properties:
+      Path: "/service-role/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::379353384462:policy/service-role/VPCFlowLogs-CloudWatch-Policy-1778657488666"
+      MaxSessionDuration: 3600
+      RoleName: "webapp-grouip10-VPCFlowLogs-Cloudwatch"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Condition:
+            StringEquals:
+              aws:SourceAccount: "379353384462"
+            ArnLike:
+              aws:SourceArn: "arn:aws:ec2:us-east-1:379353384462:vpc-flow-log/*"
+          Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "vpc-flow-logs.amazonaws.com"
+  LogsLogStreamEni04fbf888d5288b68fall:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-04fbf888d5288b68f-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  EC2InternetGateway:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::InternetGateway"
+    DeletionPolicy: "Delete"
+    Properties:
+      Tags:
+      - Value: "webapp-group10-igw"
+        Key: "Name"
+  EC2NetworkAcl:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::NetworkAcl"
+    DeletionPolicy: "Delete"
+    Properties:
+      VpcId: "vpc-0d41df79a62c6e29f"
+      Tags: []
+  EC2RouteTableTH:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::RouteTable"
+    DeletionPolicy: "Delete"
+    Properties:
+      VpcId: "vpc-0d41df79a62c6e29f"
+      Tags:
+      - Value: "webapp-group10-network-firewall-subnet-rt-3"
+        Key: "Name"
+  SecretsManagerSecretTA:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::SecretsManager::Secret"
+    DeletionPolicy: "Delete"
+    Properties:
+      ReplicaRegions: []
+      Tags: []
+      Name: "webapp-group10/backend/KEY_VAULTS_SECRET"
+  EC2Subnet:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az4"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1c"
+      CidrBlock: "10.0.9.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "webapp-group10-subnet-database3-us-east-1c"
+        Key: "Name"
+  IAMManagedPolicyPolicyserviceroleAmazonBedrockOSSPolicyForKnowledgeBasewebappgroup10:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "AmazonBedrockOSSPolicyForKnowledgeBase_webapp-group10"
+      Path: "/service-role/"
+      Description: ""
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource:
+          - "arn:aws:aoss:us-east-1:379353384462:collection/nksflrlmgqjgl8mvg1t4"
+          Action:
+          - "aoss:APIAccessAll"
+          Effect: "Allow"
+          Sid: "OpenSearchServerlessAPIAccessAllStatement"
+      Roles:
+      - "AmazonBedrockExecutionRoleForKnowledgeBase_webapp-group10"
+      Users: []
+  EC2SecurityGroup:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SecurityGroup"
+    DeletionPolicy: "Delete"
+    Properties:
+      GroupDescription: "Allow traffic from ECS only"
+      GroupName: "webapp-group10-rds-sg"
+      VpcId: "vpc-0d41df79a62c6e29f"
+      SecurityGroupIngress:
+      - IpProtocol: "tcp"
+        Description: "Allow traffic from ECS only"
+        FromPort: 5432
+        SourceSecurityGroupId: "sg-0367ef45c98a445a7"
+        ToPort: 5432
+        SourceSecurityGroupOwnerId: "379353384462"
+      - IpProtocol: "tcp"
+        Description: "Allow traffic from Lambda only"
+        FromPort: 5432
+        SourceSecurityGroupId: "sg-07c38a49bfac83ac4"
+        ToPort: 5432
+        SourceSecurityGroupOwnerId: "379353384462"
+      SecurityGroupEgress:
+      - CidrIp: "0.0.0.0/0"
+        IpProtocol: "-1"
+        FromPort: -1
+        ToPort: -1
+      Tags:
+      - Value: "webapp-group10-rds-sg"
+        Key: "Name"
+  IAMRoleWebappgroup10lambdahealthcheckdashboardexecutionrole:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Delete"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+      MaxSessionDuration: 3600
+      RoleName: "webapp-group10-lambda-healthcheck-dashboard-execution-role"
+      Description: "webapp-group10-lambda-healthcheck-dashboard-execution-role"
+      Policies:
+      - PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Resource: "*"
+            Action:
+            - "bedrock:ListFoundationModels"
+            - "bedrock:GetKnowledgeBase"
+            Effect: "Allow"
+          - Resource: "*"
+            Action:
+            - "ecs:ListServices"
+            - "ecs:DescribeServices"
+            Effect: "Allow"
+          - Resource: "arn:aws:elasticfilesystem:us-east-1:379353384462:file-system/fs-0ed34a016c3fe7c67"
+            Action:
+            - "elasticfilesystem:ClientMount"
+            - "elasticfilesystem:ClientWrite"
+            Effect: "Allow"
+        PolicyName: "addtionalPermissionForLambdaHealthCheck"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "lambda.amazonaws.com"
+  EC2SubnetB0:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az4"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1c"
+      CidrBlock: "10.0.3.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "webapp-group10-subnet-public3-us-east-1c"
+        Key: "Name"
+  LogsLogGroupWebappgroup10databasesubnetsvpcflowlog:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogGroup"
+    DeletionPolicy: "Delete"
+    Properties:
+      FieldIndexPolicies: []
+      LogGroupClass: "STANDARD"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+      BearerTokenAuthenticationEnabled: false
+      DeletionProtectionEnabled: true
+      DataProtectionPolicy: {}
+  ApiGatewayDeploymentXz:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Deployment"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+  SecretsManagerSecretLM:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::SecretsManager::Secret"
+    DeletionPolicy: "Delete"
+    Properties:
+      ReplicaRegions: []
+      Tags: []
+      Name: "webapp-group10/backend/database"
+  CloudFrontOriginRequestPolicyVt:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::CloudFront::OriginRequestPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      OriginRequestPolicyConfig:
+        QueryStringsConfig:
+          QueryStringBehavior: "all"
+        Comment: "Policy to forward all parameters in viewer requests except for the\
+          \ Host header"
+        HeadersConfig:
+          HeaderBehavior: "allExcept"
+          Headers:
+          - "host"
+        CookiesConfig:
+          CookieBehavior: "all"
+        Name: "Managed-AllViewerExceptHostHeader"
+  EC2RouteA6:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Route"
+    DeletionPolicy: "Delete"
+    Properties:
+      NatGatewayId: "nat-1307e226fdf119ea5"
+      RouteTableId: "rtb-0a50d707ed566cec7"
+      DestinationCidrBlock: "0.0.0.0/0"
+  LogsLogGroupWebappgroup10knowledgebaselogs:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogGroup"
+    DeletionPolicy: "Delete"
+    Properties:
+      FieldIndexPolicies: []
+      BearerTokenAuthenticationEnabled: false
+      LogGroupClass: "STANDARD"
+      ResourcePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Condition:
+            StringEquals:
+              aws:SourceAccount: "379353384462"
+            ArnLike:
+              aws:SourceArn: "arn:aws:logs:us-east-1:379353384462:delivery-source:WdDeliverySource-862208260"
+          Resource: "arn:aws:logs:us-east-1:379353384462:log-group:webapp-group10-knowledge-base-logs:log-stream:*"
+          Action:
+          - "logs:CreateLogStream"
+          - "logs:PutLogEvents"
+          Effect: "Allow"
+          Principal:
+            Service: "delivery.logs.amazonaws.com"
+          Sid: "AWSLogDeliveryWrite1"
+      LogGroupName: "webapp-group10-knowledge-base-logs"
+      DeletionProtectionEnabled: false
+      DataProtectionPolicy: {}
+  EC2SubnetR2:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az2"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1b"
+      CidrBlock: "10.0.11.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "az2-use1-network-firewall-subnet"
+        Key: "Name"
+  EC2SubnetNetworkAclAssociationVF:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-0acaffd6cb0552248"
+  EFSAccessPoint:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EFS::AccessPoint"
+    DeletionPolicy: "Delete"
+    Properties:
+      FileSystemId: "fs-0ed34a016c3fe7c67"
+      RootDirectory:
+        Path: "/shared"
+        CreationInfo:
+          OwnerGid: "1000"
+          Permissions: "0755"
+          OwnerUid: "1000"
+      ClientToken: "console-0d1b68d5-24c5-4794-9c5b-52cca8736f70"
+      AccessPointTags:
+      - Value: "webapp-group10-access-point"
+        Key: "Name"
+      PosixUser:
+        Uid: "1000"
+        SecondaryGids: []
+        Gid: "1000"
+  LogsLogStreamEni00aef85b81f27f153all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-00aef85b81f27f153-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  LambdaVersionFunctionwebappgroup10lambdahealthCheck5:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Lambda::Version"
+    DeletionPolicy: "Delete"
+    Properties:
+      FunctionName: "webapp-group10-lambda-healthCheck"
+      Description: "5"
+      RuntimePolicy:
+        UpdateRuntimeOn: "Auto"
+      CodeSha256: "6LaBcRaOkNPTzGK9+og9igpeZ7CNubdr1gVty9XgXTU="
+  ECSTaskDefinitionTaskdefinitionwebappgroup10taskdefinition1:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ECS::TaskDefinition"
+    DeletionPolicy: "Delete"
+    Properties:
+      InferenceAccelerators: []
+      Memory: "4096"
+      PlacementConstraints: []
+      Cpu: "2048"
+      RequiresCompatibilities:
+      - "FARGATE"
+      NetworkMode: "awsvpc"
+      EnableFaultInjection: false
+      ExecutionRoleArn: "arn:aws:iam::379353384462:role/webapp-group10-ecs-task-execution-role"
+      RuntimePlatform:
+        OperatingSystemFamily: "LINUX"
+        CpuArchitecture: "X86_64"
+      Volumes: []
+      ContainerDefinitions:
+      - Secrets:
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/KEY_VAULTS_SECRET-GDJkmj"
+          Name: "KEY_VAULTS_SECRET"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/DATABASE_URL-lKguuC"
+          Name: "DATABASE_URL"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/AUTH_SECRET-7HcrKN"
+          Name: "AUTH_SECRET"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/JWKS_KEY-bJ3Nil"
+          Name: "JWKS_KEY"
+        Memory: 4096
+        VolumesFrom: []
+        Cpu: 2048
+        EntryPoint: []
+        DnsServers: []
+        Image: "379353384462.dkr.ecr.us-east-1.amazonaws.com/webapp-group10/backend:latest"
+        Essential: true
+        LogConfiguration:
+          SecretOptions: []
+          Options:
+            awslogs-group: "/ecs/webapp-group10-task-definition"
+            awslogs-create-group: "true"
+            awslogs-region: "us-east-1"
+            awslogs-stream-prefix: "ecs"
+          LogDriver: "awslogs"
+        ResourceRequirements: []
+        EnvironmentFiles: []
+        Name: "webapp-group10-container"
+        DockerSecurityOptions: []
+        SystemControls: []
+        DnsSearchDomains: []
+        CredentialSpecs: []
+        Ulimits: []
+        MemoryReservation: 3072
+        ExtraHosts: []
+        MountPoints: []
+        DependsOn: []
+        DockerLabels: {}
+        PortMappings:
+        - ContainerPort: 3210
+          AppProtocol: "http"
+          Protocol: "tcp"
+          HostPort: 3210
+          Name: "webapp-group10-container-port"
+        Command: []
+        Environment:
+        - Value: "https://aws.hungtran.id.vn"
+          Name: "APP_URL"
+        Links: []
+      Family: "webapp-group10-task-definition"
+      Tags: []
+  LambdaVersionFunctionwebappgroup10lambdahealthCheck2:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Lambda::Version"
+    DeletionPolicy: "Delete"
+    Properties:
+      FunctionName: "webapp-group10-lambda-healthCheck"
+      Description: "2"
+      RuntimePolicy:
+        UpdateRuntimeOn: "Auto"
+      CodeSha256: "FTZQb0pxjWGTXtyLGfmllvodwktvFUaMgHZRXK7XQF4="
+  LambdaVersionFunctionwebappgroup10lambdahealthCheck1:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Lambda::Version"
+    DeletionPolicy: "Delete"
+    Properties:
+      FunctionName: "webapp-group10-lambda-healthCheck"
+      Description: "latest-latest"
+      RuntimePolicy:
+        UpdateRuntimeOn: "Auto"
+      CodeSha256: "FTZQb0pxjWGTXtyLGfmllvodwktvFUaMgHZRXK7XQF4="
+  ApiGatewayUsagePlanKey:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::UsagePlanKey"
+    DeletionPolicy: "Delete"
+    Properties:
+      KeyType: "API_KEY"
+      UsagePlanId: "44pleh"
+      KeyId: "8531gim0rb"
+  CloudFrontOriginRequestPolicy:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::CloudFront::OriginRequestPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      OriginRequestPolicyConfig:
+        QueryStringsConfig:
+          QueryStringBehavior: "all"
+        Comment: "Policy to forward all parameters in viewer requests"
+        HeadersConfig:
+          HeaderBehavior: "allViewer"
+        CookiesConfig:
+          CookieBehavior: "all"
+        Name: "Managed-AllViewer"
+  LambdaVersionFunctionwebappgroup10lambdahealthCheck4:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Lambda::Version"
+    DeletionPolicy: "Delete"
+    Properties:
+      FunctionName: "webapp-group10-lambda-healthCheck"
+      Description: "4"
+      RuntimePolicy:
+        UpdateRuntimeOn: "Auto"
+      CodeSha256: "FZ+UplmHGHbPnRcI23YO9T2KXYrqobfURhLd+tvCgqM="
+  LogsLogStreamEni00efddfb72552cfb0all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-00efddfb72552cfb0-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  LambdaVersionFunctionwebappgroup10lambdahealthCheck3:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Lambda::Version"
+    DeletionPolicy: "Delete"
+    Properties:
+      FunctionName: "webapp-group10-lambda-healthCheck"
+      Description: "3"
+      RuntimePolicy:
+        UpdateRuntimeOn: "Auto"
+      CodeSha256: "cltQB+kO9R4DKZzuCCvvMFEAUpqvHUZpdYvGVToMkts="
+  ECSCapacityProviderFARGATE:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ECS::CapacityProvider"
+    DeletionPolicy: "Delete"
+    Properties:
+      Tags: []
+      Name: "FARGATE"
+  EC2SubnetNetworkAclAssociationVw:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-0bb4637119add80da"
+  EC2SubnetNetworkAclAssociationOO:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-0b3f9298716bfb3c4"
+  S3BucketWebappgroup10kbsource:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Delete"
+    Properties:
+      AbacStatus: "Disabled"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "webapp-group10-kb-source"
+      VersioningConfiguration:
+        Status: "Enabled"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: true
+          BlockedEncryptionTypes:
+            EncryptionType:
+            - "SSE-C"
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+  EC2RouteWo:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Route"
+    DeletionPolicy: "Delete"
+    Properties:
+      NatGatewayId: "nat-1307e226fdf119ea5"
+      RouteTableId: "rtb-01e9f367109402d10"
+      DestinationCidrBlock: "0.0.0.0/0"
+  CloudFrontCachePolicyF8:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::CloudFront::CachePolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      CachePolicyConfig:
+        Comment: "Policy for origins that return Cache-Control headers. Query strings\
+          \ are not included in the cache key."
+        MinTTL: 0
+        MaxTTL: 3.1536E7
+        ParametersInCacheKeyAndForwardedToOrigin:
+          QueryStringsConfig:
+            QueryStringBehavior: "none"
+          EnableAcceptEncodingBrotli: true
+          HeadersConfig:
+            HeaderBehavior: "whitelist"
+            Headers:
+            - "x-method-override"
+            - "origin"
+            - "host"
+            - "x-http-method"
+            - "x-http-method-override"
+          CookiesConfig:
+            CookieBehavior: "all"
+          EnableAcceptEncodingGzip: true
+        DefaultTTL: 0
+        Name: "UseOriginCacheControlHeaders"
+  IAMManagedPolicyPolicyECSTaskRole:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "ECSTaskRole"
+      Path: "/"
+      Description: ""
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "*"
+          Action:
+          - "bedrock:InvokeModel"
+          - "bedrock:InvokeModelWithResponseStream"
+          Effect: "Allow"
+          Sid: "BedrockLLM"
+        - Resource: "arn:aws:bedrock:us-east-1:379353384462:knowledge-base/9OK4SPYXVP"
+          Action:
+          - "bedrock:Retrieve"
+          - "bedrock:StartIngestionJob"
+          - "bedrock:GetIngestionJob"
+          Effect: "Allow"
+          Sid: "BedrockKnowledgeBase"
+        - Resource:
+          - "arn:aws:s3:::webapp-group10-multimedia-kb"
+          - "arn:aws:s3:::webapp-group10-multimedia-kb/*"
+          Action:
+          - "s3:PutObject"
+          - "s3:GetObject"
+          - "s3:DeleteObject"
+          - "s3:ListBucket"
+          Effect: "Allow"
+          Sid: "S3KnowledgeBaseBucket"
+        - Resource: "arn:aws:s3:::webapp-group10-app-bucket/*"
+          Action:
+          - "s3:PutObject"
+          - "s3:GetObject"
+          - "s3:DeleteObject"
+          Effect: "Allow"
+          Sid: "S3AppBucket"
+      Roles:
+      - "ecsTaskRole"
+      Users: []
+  EC2VPC:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::VPC"
+    DeletionPolicy: "Delete"
+    Properties:
+      CidrBlock: "10.0.0.0/16"
+      EnableDnsSupport: true
+      InstanceTenancy: "default"
+      EnableDnsHostnames: true
+      Tags:
+      - Value: "webapp-group10-vpc"
+        Key: "Name"
+  CloudFrontCachePolicyDy:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::CloudFront::CachePolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      CachePolicyConfig:
+        Comment: "Policy with caching enabled. Supports Gzip and Brotli compression."
+        MinTTL: 1
+        MaxTTL: 3.1536E7
+        ParametersInCacheKeyAndForwardedToOrigin:
+          QueryStringsConfig:
+            QueryStringBehavior: "none"
+          EnableAcceptEncodingBrotli: true
+          HeadersConfig:
+            HeaderBehavior: "none"
+          CookiesConfig:
+            CookieBehavior: "none"
+          EnableAcceptEncodingGzip: true
+        DefaultTTL: 86400
+        Name: "Managed-CachingOptimized"
+  LambdaAliasFunctionwebappgroup10lambdahealthCheckhealthcheckprodution:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Lambda::Alias"
+    DeletionPolicy: "Delete"
+    Properties:
+      FunctionName: "arn:aws:lambda:us-east-1:379353384462:function:webapp-group10-lambda-healthCheck"
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 2
+      Description: ""
+      RoutingConfig: {}
+      FunctionVersion: "5"
+      Name: "health-check-prodution"
+  EC2RouteTable:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::RouteTable"
+    DeletionPolicy: "Delete"
+    Properties:
+      VpcId: "vpc-0d41df79a62c6e29f"
+      Tags:
+      - Value: "webapp-group10-network-firewall-subnet-rt-2"
+        Key: "Name"
+  EC2SubnetNetworkAclAssociationOH:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-0fb7a267051a465ee"
+  ApiGatewayDeploymentQ5:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Deployment"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+  KMSKeyKZ:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::KMS::Key"
+    DeletionPolicy: "Delete"
+    Properties:
+      Origin: "AWS_KMS"
+      MultiRegion: false
+      Description: "Default key that protects my RDS database volumes when no other\
+        \ key is defined"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+        - Condition:
+            StringEquals:
+              kms:CallerAccount: "379353384462"
+              kms:ViaService: "rds.us-east-1.amazonaws.com"
+          Resource: "*"
+          Action:
+          - "kms:Encrypt"
+          - "kms:Decrypt"
+          - "kms:ReEncrypt*"
+          - "kms:GenerateDataKey*"
+          - "kms:CreateGrant"
+          - "kms:ListGrants"
+          - "kms:DescribeKey"
+          Effect: "Allow"
+          Principal:
+            AWS: "*"
+          Sid: "Allow access through RDS for all principals in the account that are\
+            \ authorized to use RDS"
+        - Resource: "*"
+          Action:
+          - "kms:Describe*"
+          - "kms:Get*"
+          - "kms:List*"
+          - "kms:RevokeGrant"
+          Effect: "Allow"
+          Principal:
+            AWS: "arn:aws:iam::379353384462:root"
+          Sid: "Allow direct access to key metadata to the account"
+        Id: "auto-rds-2"
+      KeySpec: "SYMMETRIC_DEFAULT"
+      Enabled: true
+      EnableKeyRotation: true
+      KeyUsage: "ENCRYPT_DECRYPT"
+      Tags: []
+  IAMRoleWebappgroup10ecstaskexecutionrole:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Delete"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+      MaxSessionDuration: 3600
+      RoleName: "webapp-group10-ecs-task-execution-role"
+      Description: "Allows access to other AWS service resources that are required\
+        \ to run Amazon ECS tasks."
+      Policies:
+      - PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Resource: "arn:aws:s3:::webapp-group10-backend-env/.env"
+            Action: "s3:GetObject"
+            Effect: "Allow"
+          - Resource: "arn:aws:s3:::webapp-group10-backend-env/"
+            Action: "s3:GetBucketLocation"
+            Effect: "Allow"
+        PolicyName: "getEnv"
+      - PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Resource: "*"
+            Action: "ssm:GetParameter"
+            Effect: "Allow"
+            Sid: "VisualEditor0"
+        PolicyName: "getParameters"
+      - PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Resource: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/*"
+            Action: "secretsmanager:GetSecretValue"
+            Effect: "Allow"
+            Sid: "VisualEditor0"
+        PolicyName: "getSecrets"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "ecs-tasks.amazonaws.com"
+          Sid: "AllowAccessToECSForTaskExecutionRole"
+  ECSTaskDefinitionTaskdefinitionwebappgroup10taskdefinition7:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ECS::TaskDefinition"
+    DeletionPolicy: "Delete"
+    Properties:
+      TaskRoleArn: "arn:aws:iam::379353384462:role/ecsTaskRole"
+      InferenceAccelerators: []
+      Memory: "4096"
+      PlacementConstraints: []
+      Cpu: "2048"
+      RequiresCompatibilities:
+      - "FARGATE"
+      NetworkMode: "awsvpc"
+      EnableFaultInjection: false
+      ExecutionRoleArn: "arn:aws:iam::379353384462:role/webapp-group10-ecs-task-execution-role"
+      RuntimePlatform:
+        OperatingSystemFamily: "LINUX"
+        CpuArchitecture: "X86_64"
+      Volumes:
+      - EFSVolumeConfiguration:
+          FilesystemId: "fs-0ed34a016c3fe7c67"
+          TransitEncryption: "ENABLED"
+          RootDirectory: "/"
+          AuthorizationConfig:
+            IAM: "ENABLED"
+            AccessPointId: "fsap-061b2c076b9155ceb"
+        Name: "efs-shared"
+      ContainerDefinitions:
+      - Secrets:
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/API_KEY-Xf4MX8"
+          Name: "API_KEY"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/bedrock-7Gi5Ql:BEDROCK_KB_DATA_SOURCE_ID::"
+          Name: "BEDROCK_KB_DATA_SOURCE_ID"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/bedrock-7Gi5Ql:BEDROCK_KB_S3_BUCKET::"
+          Name: "BEDROCK_KB_S3_BUCKET"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/bedrock-7Gi5Ql:BEDROCK_KB_S3_PREFIX::"
+          Name: "BEDROCK_KB_S3_PREFIX"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/bedrock-7Gi5Ql:BEDROCK_KNOWLEDGE_BASE_ID::"
+          Name: "BEDROCK_KNOWLEDGE_BASE_ID"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/database-FCHfZu:POSTGRES_DB::"
+          Name: "POSTGRES_DB"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/database-FCHfZu:POSTGRES_HOST::"
+          Name: "POSTGRES_HOST"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/database-FCHfZu:POSTGRES_PASSWORD::"
+          Name: "POSTGRES_PASSWORD"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/database-FCHfZu:POSTGRES_PORT::"
+          Name: "POSTGRES_PORT"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/database-FCHfZu:POSTGRES_USER::"
+          Name: "POSTGRES_USER"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/redis-y9dZFI:REDIS_HOST::"
+          Name: "REDIS_HOST"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/SECRET_KEY-hLGPLm"
+          Name: "SECRET_KEY"
+        Memory: 4096
+        VolumesFrom: []
+        Cpu: 2048
+        EntryPoint: []
+        DnsServers: []
+        Image: "379353384462.dkr.ecr.us-east-1.amazonaws.com/webapp-group10/backend:latest"
+        Essential: true
+        LogConfiguration:
+          SecretOptions: []
+          Options:
+            awslogs-group: "/ecs/webapp-group10-task-definition"
+            awslogs-create-group: "true"
+            awslogs-region: "us-east-1"
+            awslogs-stream-prefix: "ecs"
+          LogDriver: "awslogs"
+        ResourceRequirements: []
+        EnvironmentFiles:
+        - Value: "arn:aws:s3:::webapp-group10-backend-env/.env"
+          Type: "s3"
+        Name: "webapp-group10-container"
+        DockerSecurityOptions: []
+        SystemControls: []
+        DnsSearchDomains: []
+        CredentialSpecs: []
+        Ulimits: []
+        MemoryReservation: 3072
+        ExtraHosts: []
+        MountPoints:
+        - ReadOnly: false
+          SourceVolume: "efs-shared"
+          ContainerPath: "/mnt/efs/shared"
+        DependsOn: []
+        DockerLabels: {}
+        PortMappings:
+        - ContainerPort: 8000
+          AppProtocol: "http"
+          Protocol: "tcp"
+          HostPort: 8000
+          Name: "webapp-group10-container-port"
+        Command: []
+        Environment:
+        - Value: "true"
+          Name: "REDIS_SSL"
+        - Value: "false"
+          Name: "DEBUG"
+        - Value: "10080"
+          Name: "ACCESS_TOKEN_EXPIRE_MINUTES"
+        - Value: "us-east-1"
+          Name: "S3_MEDIA_REGION"
+        - Value: "ChatGPT"
+          Name: "PROJECT_NAME"
+        - Value: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/redis-y9dZFI:REDIS_DB::"
+          Name: "REDIS_DB"
+        - Value: "media"
+          Name: "S3_MEDIA_PREFIX"
+        - Value: "global.anthropic.claude-sonnet-4-6"
+          Name: "AI_MODEL"
+        - Value: "0.7"
+          Name: "AI_TEMPERATURE"
+        - Value: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/redis-y9dZFI:REDIS_PORT::"
+          Name: "REDIS_PORT"
+        - Value: "true"
+          Name: "REDIS_ENABLED"
+        - Value: "[\"global.anthropic.claude-opus-4-6-v1\", \"global.anthropic.claude-sonnet-4-5-20250929-v1:0\"\
+            , \"global.anthropic.claude-opus-4-5-20251101-v1:0\"]"
+          Name: "AI_AVAILABLE_MODELS"
+        - Value: "HS256"
+          Name: "ALGORITHM"
+        - Value: "production"
+          Name: "ENVIRONMENT"
+        - Value: "UTC"
+          Name: "TIMEZONE"
+        - Value: "us-east-1"
+          Name: "AWS_REGION"
+        - Value: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/redis-y9dZFI:REDIS_PASSWORD::"
+          Name: "REDIS_PASSWORD"
+        - Value: "webapp-group10-backend-bucket"
+          Name: "S3_MEDIA_BUCKET"
+        Links: []
+      Family: "webapp-group10-task-definition"
+      Tags: []
+  NetworkFirewallFirewallPolicyFirewallpolicywebappgroup10firewallpolicy:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::NetworkFirewall::FirewallPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      Description: "webapp-group10-firewall-policy"
+      FirewallPolicyName: "webapp-group10-firewall-policy"
+      Tags: []
+      FirewallPolicy:
+        StatefulEngineOptions:
+          RuleOrder: "STRICT_ORDER"
+          StreamExceptionPolicy: "REJECT"
+        StatefulRuleGroupReferences:
+        - ResourceArn: "arn:aws:network-firewall:us-east-1:aws-managed:stateful-rulegroup/AttackInfrastructureStrictOrder"
+          DeepThreatInspection: true
+          Priority: 1
+        - ResourceArn: "arn:aws:network-firewall:us-east-1:379353384462:stateful-rulegroup/webapp-group10-block-facebook"
+          Priority: 2
+        StatelessFragmentDefaultActions:
+        - "aws:forward_to_sfe"
+        StatelessDefaultActions:
+        - "aws:forward_to_sfe"
+        StatefulDefaultActions:
+        - "aws:alert_established_app_layer"
+        - "aws:alert_strict"
+        - "aws:drop_established_app_layer"
+  CloudFrontOriginAccessControl:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::CloudFront::OriginAccessControl"
+    DeletionPolicy: "Delete"
+    Properties:
+      OriginAccessControlConfig:
+        SigningBehavior: "always"
+        Description: ""
+        SigningProtocol: "sigv4"
+        OriginAccessControlOriginType: "s3"
+        Name: "webapp-group10-frontend-bucket.s3.us-east-1.amazonaws.com"
+  ECSTaskDefinitionTaskdefinitionwebappgroup10taskdefinition6:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ECS::TaskDefinition"
+    DeletionPolicy: "Delete"
+    Properties:
+      TaskRoleArn: "arn:aws:iam::379353384462:role/ecsTaskRole"
+      InferenceAccelerators: []
+      Memory: "4096"
+      PlacementConstraints: []
+      Cpu: "2048"
+      RequiresCompatibilities:
+      - "FARGATE"
+      NetworkMode: "awsvpc"
+      EnableFaultInjection: false
+      ExecutionRoleArn: "arn:aws:iam::379353384462:role/webapp-group10-ecs-task-execution-role"
+      RuntimePlatform:
+        OperatingSystemFamily: "LINUX"
+        CpuArchitecture: "X86_64"
+      Volumes:
+      - EFSVolumeConfiguration:
+          FilesystemId: "fs-0ed34a016c3fe7c67"
+          TransitEncryption: "ENABLED"
+          RootDirectory: "/"
+          AuthorizationConfig:
+            IAM: "ENABLED"
+            AccessPointId: "fsap-061b2c076b9155ceb"
+        Name: "efs-shared"
+      ContainerDefinitions:
+      - Secrets:
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/database-FCHfZu:POSTGRES_HOST::"
+          Name: "POSTGRES_HOST"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/database-FCHfZu:POSTGRES_PORT::"
+          Name: "POSTGRES_PORT"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/database-FCHfZu:POSTGRES_USER::"
+          Name: "POSTGRES_USER"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/database-FCHfZu:POSTGRES_PASSWORD::"
+          Name: "POSTGRES_PASSWORD"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/database-FCHfZu:POSTGRES_DB::"
+          Name: "POSTGRES_DB"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/SECRET_KEY-hLGPLm"
+          Name: "SECRET_KEY"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/API_KEY-Xf4MX8"
+          Name: "API_KEY"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/redis-y9dZFI:REDIS_HOST::"
+          Name: "REDIS_HOST"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/bedrock-7Gi5Ql:BEDROCK_KNOWLEDGE_BASE_ID::"
+          Name: "BEDROCK_KNOWLEDGE_BASE_ID"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/bedrock-7Gi5Ql:BEDROCK_KB_DATA_SOURCE_ID::"
+          Name: "BEDROCK_KB_DATA_SOURCE_ID"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/bedrock-7Gi5Ql:BEDROCK_KB_S3_BUCKET::"
+          Name: "BEDROCK_KB_S3_BUCKET"
+        - ValueFrom: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/bedrock-7Gi5Ql:BEDROCK_KB_S3_PREFIX::"
+          Name: "BEDROCK_KB_S3_PREFIX"
+        Memory: 4096
+        VolumesFrom: []
+        Cpu: 2048
+        EntryPoint: []
+        DnsServers: []
+        Image: "379353384462.dkr.ecr.us-east-1.amazonaws.com/webapp-group10/backend:latest"
+        Essential: true
+        LogConfiguration:
+          SecretOptions: []
+          Options:
+            awslogs-group: "/ecs/webapp-group10-task-definition"
+            awslogs-create-group: "true"
+            awslogs-region: "us-east-1"
+            awslogs-stream-prefix: "ecs"
+          LogDriver: "awslogs"
+        ResourceRequirements: []
+        EnvironmentFiles:
+        - Value: "arn:aws:s3:::webapp-group10-backend-env/.env"
+          Type: "s3"
+        Name: "webapp-group10-container"
+        DockerSecurityOptions: []
+        SystemControls: []
+        DnsSearchDomains: []
+        CredentialSpecs: []
+        Ulimits: []
+        MemoryReservation: 3072
+        ExtraHosts: []
+        MountPoints:
+        - ReadOnly: false
+          SourceVolume: "efs-shared"
+          ContainerPath: "/mnt/efs/shared"
+        DependsOn: []
+        DockerLabels: {}
+        PortMappings:
+        - ContainerPort: 8000
+          AppProtocol: "http"
+          Protocol: "tcp"
+          HostPort: 8000
+          Name: "webapp-group10-container-port"
+        Command: []
+        Environment:
+        - Value: "true"
+          Name: "REDIS_SSL"
+        - Value: "false"
+          Name: "DEBUG"
+        - Value: "10080"
+          Name: "ACCESS_TOKEN_EXPIRE_MINUTES"
+        - Value: "ChatGPT"
+          Name: "PROJECT_NAME"
+        - Value: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/redis-y9dZFI:REDIS_DB::"
+          Name: "REDIS_DB"
+        - Value: "global.anthropic.claude-sonnet-4-6"
+          Name: "AI_MODEL"
+        - Value: "0.7"
+          Name: "AI_TEMPERATURE"
+        - Value: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/redis-y9dZFI:REDIS_PORT::"
+          Name: "REDIS_PORT"
+        - Value: "true"
+          Name: "REDIS_ENABLED"
+        - Value: "[\"global.anthropic.claude-opus-4-6-v1\", \"global.anthropic.claude-sonnet-4-5-20250929-v1:0\"\
+            , \"global.anthropic.claude-opus-4-5-20251101-v1:0\"]"
+          Name: "AI_AVAILABLE_MODELS"
+        - Value: "HS256"
+          Name: "ALGORITHM"
+        - Value: "production"
+          Name: "ENVIRONMENT"
+        - Value: "UTC"
+          Name: "TIMEZONE"
+        - Value: "us-east-1"
+          Name: "AWS_REGION"
+        - Value: "arn:aws:secretsmanager:us-east-1:379353384462:secret:webapp-group10/backend/redis-y9dZFI:REDIS_PASSWORD::"
+          Name: "REDIS_PASSWORD"
+        Links: []
+      Family: "webapp-group10-task-definition"
+      Tags: []
+  ECSTaskDefinitionTaskdefinitionwebappgroup10taskdefinition5:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ECS::TaskDefinition"
+    DeletionPolicy: "Delete"
+    Properties:
+      TaskRoleArn: "arn:aws:iam::379353384462:role/ecsTaskRole"
+      InferenceAccelerators: []
+      Memory: "4096"
+      PlacementConstraints: []
+      Cpu: "2048"
+      RequiresCompatibilities:
+      - "FARGATE"
+      NetworkMode: "awsvpc"
+      EnableFaultInjection: false
+      ExecutionRoleArn: "arn:aws:iam::379353384462:role/webapp-group10-ecs-task-execution-role"
+      RuntimePlatform:
+        OperatingSystemFamily: "LINUX"
+        CpuArchitecture: "X86_64"
+      Volumes:
+      - EFSVolumeConfiguration:
+          FilesystemId: "fs-0ed34a016c3fe7c67"
+          TransitEncryption: "ENABLED"
+          RootDirectory: "/"
+          AuthorizationConfig:
+            IAM: "ENABLED"
+            AccessPointId: "fsap-061b2c076b9155ceb"
+        Name: "efs-shared"
+      ContainerDefinitions:
+      - Secrets: []
+        Memory: 4096
+        VolumesFrom: []
+        Cpu: 2048
+        EntryPoint: []
+        DnsServers: []
+        Image: "379353384462.dkr.ecr.us-east-1.amazonaws.com/webapp-group10/backend:latest"
+        Essential: true
+        LogConfiguration:
+          SecretOptions: []
+          Options:
+            awslogs-group: "/ecs/webapp-group10-task-definition"
+            awslogs-create-group: "true"
+            awslogs-region: "us-east-1"
+            awslogs-stream-prefix: "ecs"
+          LogDriver: "awslogs"
+        ResourceRequirements: []
+        EnvironmentFiles:
+        - Value: "arn:aws:s3:::webapp-group10-backend-env/.env"
+          Type: "s3"
+        Name: "webapp-group10-container"
+        DockerSecurityOptions: []
+        SystemControls: []
+        DnsSearchDomains: []
+        CredentialSpecs: []
+        Ulimits: []
+        MemoryReservation: 3072
+        ExtraHosts: []
+        MountPoints:
+        - ReadOnly: false
+          SourceVolume: "efs-shared"
+          ContainerPath: "/mnt/efs/shared"
+        DependsOn: []
+        DockerLabels: {}
+        PortMappings:
+        - ContainerPort: 8000
+          AppProtocol: "http"
+          Protocol: "tcp"
+          HostPort: 8000
+          Name: "webapp-group10-container-port"
+        Command: []
+        Environment: []
+        Links: []
+      Family: "webapp-group10-task-definition"
+      Tags: []
+  EC2SubnetQ7:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az2"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1b"
+      CidrBlock: "10.0.2.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "webapp-group10-subnet-public2-us-east-1b"
+        Key: "Name"
+  ECSTaskDefinitionTaskdefinitionwebappgroup10taskdefinition4:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ECS::TaskDefinition"
+    DeletionPolicy: "Delete"
+    Properties:
+      TaskRoleArn: "arn:aws:iam::379353384462:role/ecsTaskRole"
+      InferenceAccelerators: []
+      Memory: "4096"
+      PlacementConstraints: []
+      Cpu: "2048"
+      RequiresCompatibilities:
+      - "FARGATE"
+      NetworkMode: "awsvpc"
+      EnableFaultInjection: false
+      ExecutionRoleArn: "arn:aws:iam::379353384462:role/webapp-group10-ecs-task-execution-role"
+      RuntimePlatform:
+        OperatingSystemFamily: "LINUX"
+        CpuArchitecture: "X86_64"
+      Volumes:
+      - EFSVolumeConfiguration:
+          FilesystemId: "fs-0ed34a016c3fe7c67"
+          TransitEncryption: "ENABLED"
+          RootDirectory: "/"
+          AuthorizationConfig:
+            IAM: "ENABLED"
+            AccessPointId: "fsap-061b2c076b9155ceb"
+        Name: "efs-shared"
+      ContainerDefinitions:
+      - Secrets: []
+        Memory: 4096
+        VolumesFrom: []
+        Cpu: 2048
+        EntryPoint: []
+        DnsServers: []
+        Image: "379353384462.dkr.ecr.us-east-1.amazonaws.com/webapp-group10/backend:latest"
+        Essential: true
+        LogConfiguration:
+          SecretOptions: []
+          Options:
+            awslogs-group: "/ecs/webapp-group10-task-definition"
+            awslogs-create-group: "true"
+            awslogs-region: "us-east-1"
+            awslogs-stream-prefix: "ecs"
+          LogDriver: "awslogs"
+        ResourceRequirements: []
+        EnvironmentFiles:
+        - Value: "arn:aws:s3:::webapp-group10-backend-env/.env"
+          Type: "s3"
+        Name: "webapp-group10-container"
+        DockerSecurityOptions: []
+        SystemControls: []
+        DnsSearchDomains: []
+        CredentialSpecs: []
+        Ulimits: []
+        MemoryReservation: 3072
+        ExtraHosts: []
+        MountPoints: []
+        DependsOn: []
+        DockerLabels: {}
+        PortMappings:
+        - ContainerPort: 8000
+          AppProtocol: "http"
+          Protocol: "tcp"
+          HostPort: 8000
+          Name: "webapp-group10-container-port"
+        Command: []
+        Environment: []
+        Links: []
+      Family: "webapp-group10-task-definition"
+      Tags: []
+  EC2VPCGatewayAttachmentIGW:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    DeletionPolicy: "Delete"
+    Properties:
+      InternetGatewayId: "igw-00b0a4e2a55986cfb"
+      VpcId: "vpc-0d41df79a62c6e29f"
+  IAMManagedPolicyPolicyserviceroleAmazonBedrockInferenceProfilePolicyForKnowledgeBasewebappgroup10:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "AmazonBedrockInferenceProfilePolicyForKnowledgeBase_webapp-group10"
+      Path: "/service-role/"
+      Description: ""
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource:
+          - "arn:aws:bedrock:us-east-1:379353384462:inference-profile/global.anthropic.claude-sonnet-4-6"
+          - "arn:aws:bedrock:us-east-1:379353384462:inference-profile/us.anthropic.claude-sonnet-4-6"
+          - "arn:aws:bedrock:us-east-1:379353384462:inference-profile/anthropic.claude-sonnet-4-6"
+          - "arn:aws:bedrock:us-east-1:379353384462:inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+          - "arn:aws:bedrock:us-east-1:379353384462:application-inference-profile/global.anthropic.claude-sonnet-4-6"
+          - "arn:aws:bedrock:us-east-1:379353384462:application-inference-profile/us.anthropic.claude-sonnet-4-6"
+          - "arn:aws:bedrock:us-east-1:379353384462:application-inference-profile/anthropic.claude-sonnet-4-6"
+          - "arn:aws:bedrock:us-east-1:379353384462:application-inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+          - "arn:aws:bedrock:*::foundation-model/global.anthropic.claude-sonnet-4-6"
+          - "arn:aws:bedrock:*::foundation-model/us.anthropic.claude-sonnet-4-6"
+          - "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4-6"
+          - "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0"
+          Action:
+          - "bedrock:GetInferenceProfile"
+          - "bedrock:InvokeModel"
+          Effect: "Allow"
+          Sid: "BedrockInvokeInferenceProfileStatement"
+      Roles:
+      - "AmazonBedrockExecutionRoleForKnowledgeBase_webapp-group10"
+      Users: []
+  IAMManagedPolicyPolicyserviceroleAmazonBedrockS3PolicyForKnowledgeBasewebappgroup10:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "AmazonBedrockS3PolicyForKnowledgeBase_webapp-group10"
+      Path: "/service-role/"
+      Description: ""
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Condition:
+            StringEquals:
+              aws:ResourceAccount:
+              - "379353384462"
+          Resource:
+          - "arn:aws:s3:::webapp-group10-multimedia-kb"
+          - "arn:aws:s3:::webapp-group10-kb-source"
+          - "arn:aws:s3:::webapp-group10-kb-source.s3.us-east-1.amazonaws.com"
+          - "arn:aws:s3:::undefined"
+          Action:
+          - "s3:ListBucket"
+          Effect: "Allow"
+          Sid: "S3ListBucketStatement"
+        - Condition:
+            StringEquals:
+              aws:ResourceAccount:
+              - "379353384462"
+          Resource:
+          - "arn:aws:s3:::webapp-group10-multimedia-kb"
+          - "arn:aws:s3:::webapp-group10-kb-source"
+          - "arn:aws:s3:::webapp-group10-kb-source.s3.us-east-1.amazonaws.com"
+          - "arn:aws:s3:::webapp-group10-multimedia-kb/rag-documents/"
+          - "arn:aws:s3:::webapp-group10-multimedia-kb/*"
+          - "arn:aws:s3:::webapp-group10-kb-source/*"
+          - "arn:aws:s3:::webapp-group10-kb-source.s3.us-east-1.amazonaws.com/*"
+          - "arn:aws:s3:::webapp-group10-multimedia-kb/rag-documents/*"
+          - "arn:aws:s3:::webapp-group10-multimedia-kb/rag-documents.metadata.json/*"
+          - "arn:aws:s3:::undefined/*"
+          Action:
+          - "s3:GetObject"
+          Effect: "Allow"
+          Sid: "S3GetObjectStatement"
+        - Condition:
+            StringEquals:
+              aws:ResourceAccount: "379353384462"
+          Resource:
+          - "arn:aws:s3:::webapp-group10-kb-source/*"
+          Action:
+          - "s3:PutObject"
+          Effect: "Allow"
+          Sid: "S3PutObjectStatement"
+        - Condition:
+            StringEquals:
+              aws:ResourceAccount: "379353384462"
+          Resource:
+          - "arn:aws:s3:::webapp-group10-kb-source/*"
+          Action:
+          - "s3:DeleteObject"
+          Effect: "Allow"
+          Sid: "S3DeleteObjectStatement"
+      Roles:
+      - "AmazonBedrockExecutionRoleForKnowledgeBase_webapp-group10"
+      Users: []
+  EC2RouteTableYe:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::RouteTable"
+    DeletionPolicy: "Delete"
+    Properties:
+      VpcId: "vpc-0d41df79a62c6e29f"
+      Tags:
+      - Value: "webapp-group10-network-firewall-subnet-rt-1"
+        Key: "Name"
+  EC2SubnetVf:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az2"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1b"
+      CidrBlock: "10.0.8.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "webapp-group10-subnet-database2-us-east-1b"
+        Key: "Name"
+  EC2SubnetNetworkAclAssociationQ3:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-02de02866c0bb7981"
+  NetworkFirewallRuleGroupStatefulrulegroupwebappgroup10blockfacebook:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::NetworkFirewall::RuleGroup"
+    DeletionPolicy: "Delete"
+    Properties:
+      Type: "STATEFUL"
+      Description: "Block outbound HTTPS access to Facebook using AWS Network Firewall\
+        \ stateful inspection."
+      Capacity: 100
+      RuleGroupName: "webapp-group10-block-facebook"
+      RuleGroup:
+        StatefulRuleOptions:
+          RuleOrder: "STRICT_ORDER"
+        RuleVariables:
+          IPSets:
+            HOME_NET:
+              Definition:
+              - "10.0.0.0/16"
+        RulesSource:
+          RulesString: "drop ip $HOME_NET any -> 57.144.0.0/14 any (msg:\"BLOCK_META_NETWORK\"\
+            ; sid:1000005;)"
+      Tags: []
+  ApiGatewayResource:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Resource"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+  EC2NatGateway:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::NatGateway"
+    DeletionPolicy: "Delete"
+    Properties:
+      ConnectivityType: "public"
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneAddresses:
+      - AvailabilityZoneId: "use1-az4"
+        AvailabilityZone: "us-east-1c"
+        AllocationIds:
+        - "eipalloc-0e54f6806a9084c11"
+      - AvailabilityZoneId: "use1-az2"
+        AvailabilityZone: "us-east-1b"
+        AllocationIds:
+        - "eipalloc-03f78e16c2598a142"
+      - AvailabilityZoneId: "use1-az1"
+        AvailabilityZone: "us-east-1a"
+        AllocationIds:
+        - "eipalloc-0c6ba623309cbcaa5"
+      AvailabilityMode: "regional"
+      Tags:
+      - Value: "webapp-group10-regional-nat"
+        Key: "Name"
+  EC2SubnetNetworkAclAssociationY4:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-01c802af5ab604ed6"
+  SecretsManagerSecretUs:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::SecretsManager::Secret"
+    DeletionPolicy: "Delete"
+    Properties:
+      ReplicaRegions: []
+      Tags: []
+      Name: "webapp-group10/backend/SECRET_KEY"
+  EC2SubnetFj:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az1"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1a"
+      CidrBlock: "10.0.10.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "az1-use1-network-firewall-subnet"
+        Key: "Name"
+  ApiGatewayModelCz:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Model"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+      Description: "This is a default error schema model"
+      ContentType: "application/json"
+      Schema:
+        $schema: "http://json-schema.org/draft-04/schema#"
+        title: "Error Schema"
+        type: "object"
+        properties:
+          message:
+            type: "string"
+      Name: "Error"
+  LambdaFunctionWebappgroup10lambdahealthCheck:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Lambda::Function"
+    DeletionPolicy: "Delete"
+    Properties:
+      MemorySize: 512
+      Description: ""
+      TracingConfig:
+        Mode: "PassThrough"
+      VpcConfig:
+        SecurityGroupIds:
+        - "sg-07c38a49bfac83ac4"
+        SubnetIds:
+        - "subnet-0cfb0331238aa03b9"
+        - "subnet-06dcc80d7d195dc30"
+        - "subnet-0b3f9298716bfb3c4"
+        Ipv6AllowedForDualStack: false
+      Timeout: 90
+      RuntimeManagementConfig:
+        UpdateRuntimeOn: "Auto"
+      Handler: "handler.lambda_handler"
+      Code:
+        SourceKMSKeyArn:
+          Ref: "LambdaFunctionWebappgroup10lambdahealthCheckCodeSourceKMSKeyArnz0NLO"
+        S3ObjectVersion:
+          Ref: "LambdaFunctionWebappgroup10lambdahealthCheckCodeS3ObjectVersionFbz9P"
+        S3Bucket:
+          Ref: "LambdaFunctionWebappgroup10lambdahealthCheckCodeS3Bucket4pClU"
+        ZipFile:
+          Ref: "LambdaFunctionWebappgroup10lambdahealthCheckCodeZipFile1GxeL"
+        ImageUri:
+          Ref: "LambdaFunctionWebappgroup10lambdahealthCheckCodeImageUri4WyoH"
+        S3Key:
+          Ref: "LambdaFunctionWebappgroup10lambdahealthCheckCodeS3KeyUzjy2"
+      Role: "arn:aws:iam::379353384462:role/webapp-group10-lambda-healthcheck-dashboard-execution-role"
+      FileSystemConfigs:
+      - Arn: "arn:aws:elasticfilesystem:us-east-1:379353384462:access-point/fsap-083b038ac317b8c0f"
+        LocalMountPath: "/mnt/efs"
+      FunctionName: "webapp-group10-lambda-healthCheck"
+      Runtime: "python3.12"
+      PackageType: "Zip"
+      LoggingConfig:
+        LogFormat: "Text"
+        LogGroup: "/aws/lambda/webapp-group10-lambda-healthCheck"
+      RecursiveLoop: "Terminate"
+      Environment:
+        Variables:
+          POSTGRES_USER: "postgres"
+          REDIS_HOST: "webapp-group10-reddis-yp6k2y.serverless.use1.cache.amazonaws.com"
+          ECS_CLUSTER_NAME: "webapp-group10-backend"
+          POSTGRES_HOST: "webapp-group10-database.c49iiwgcydsj.us-east-1.rds.amazonaws.com"
+          MAIN_APP_HEALTH_URL: "http://internal-webapp-group10-internal-alb-1713658819.us-east-1.elb.amazonaws.com:8000/api/v1/health"
+          BEDROCK_KNOWLEDGE_BASE_ID: "9OK4SPYXVP"
+          POSTGRES_PASSWORD: "mysecretpassword"
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: "postgres"
+          EFS_MOUNT_DIR: "/mnt/efs"
+          REDIS_PORT: "6379"
+          REDIS_PASSWORD: ""
+          MAIN_APP_API_KEY: "KSOWFTPkeD765gTn53LWN39IXuoEB4t62iEI65dN"
+          REDIS_SSL: "true"
+      EphemeralStorage:
+        Size: 1024
+      Architectures:
+      - "x86_64"
+  IAMRoleEcsTaskRole:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Delete"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::379353384462:policy/ECSTaskRole"
+      MaxSessionDuration: 3600
+      RoleName: "ecsTaskRole"
+      Description: "Allows ECS tasks to call AWS services on your behalf."
+      Policies:
+      - PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Resource: "arn:aws:s3:::webapp-group10-backend-bucket/media/*"
+            Action:
+            - "s3:PutObject"
+            - "s3:GetObject"
+            - "s3:DeleteObject"
+            Effect: "Allow"
+        PolicyName: "backendBucketAccess"
+      - PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Resource: "arn:aws:elasticfilesystem:us-east-1:379353384462:file-system/fs-0ed34a016c3fe7c67"
+            Action:
+            - "elasticfilesystem:ClientMount"
+            - "elasticfilesystem:ClientWrite"
+            - "elasticfilesystem:DescribeMountTargets"
+            Effect: "Allow"
+        PolicyName: "EFS-Access"
+      - PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Resource: "*"
+            Action:
+            - "ssmmessages:CreateControlChannel"
+            - "ssmmessages:CreateDataChannel"
+            - "ssmmessages:OpenControlChannel"
+            - "ssmmessages:OpenDataChannel"
+            Effect: "Allow"
+            Sid: "Statement1"
+        PolicyName: "enablePsExec"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "ecs-tasks.amazonaws.com"
+          Sid: ""
+  ApiGatewayDeploymentWb:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Deployment"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+  BackupBackupVaultWebappgroup10vault:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Backup::BackupVault"
+    DeletionPolicy: "Delete"
+    Properties:
+      BackupVaultTags: {}
+      EncryptionKeyArn: "arn:aws:kms:us-east-1:379353384462:key/21e46314-1fab-4573-9f2a-9086e7b534b6"
+      BackupVaultName: "webapp-group10-vault"
+  LambdaVersionFunctionwebappgroup10lambdahealthCheck12:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Lambda::Version"
+    DeletionPolicy: "Delete"
+    Properties:
+      FunctionName: "webapp-group10-lambda-healthCheck"
+      Description: ""
+      RuntimePolicy:
+        UpdateRuntimeOn: "Auto"
+      CodeSha256: "6LaBcRaOkNPTzGK9+og9igpeZ7CNubdr1gVty9XgXTU="
+  LogsLogStreamEni0140714fe8ac3b13dall:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-0140714fe8ac3b13d-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  S3BucketWebappgroup10frontendbucket:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Delete"
+    Properties:
+      AbacStatus: "Disabled"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "webapp-group10-frontend-bucket"
+      VersioningConfiguration:
+        Status: "Enabled"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: true
+          BlockedEncryptionTypes:
+            EncryptionType:
+            - "SSE-C"
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+  EC2DHCPOptions:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::DHCPOptions"
+    DeletionPolicy: "Delete"
+    Properties:
+      DomainName: "ec2.internal"
+      DomainNameServers:
+      - "AmazonProvidedDNS"
+      Tags: []
+  EC2SubnetNetworkAclAssociationQP:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-0148c1ed9dd01ab02"
+  ApiGatewayRestApi:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::RestApi"
+    DeletionPolicy: "Delete"
+    Properties:
+      ApiKeySourceType: "HEADER"
+      EndpointConfiguration:
+        IpAddressType: "ipv4"
+        Types:
+        - "REGIONAL"
+      DisableExecuteApiEndpoint: false
+      SecurityPolicy: "SecurityPolicy_TLS13_1_2_2021_06"
+      Name: "webapp-group10-api-gateway"
+      EndpointAccessMode: "BASIC"
+  EC2Route:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Route"
+    DeletionPolicy: "Delete"
+    Properties:
+      NatGatewayId: "nat-1307e226fdf119ea5"
+      RouteTableId: "rtb-01266ab2c8c31f25a"
+      DestinationCidrBlock: "0.0.0.0/0"
+  SecretsManagerSecret:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::SecretsManager::Secret"
+    DeletionPolicy: "Delete"
+    Properties:
+      ReplicaRegions: []
+      Tags: []
+      Name: "webapp-group10/backend/API_KEY"
+  CloudFrontCachePolicy:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::CloudFront::CachePolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      CachePolicyConfig:
+        Comment: "Policy with caching disabled"
+        MinTTL: 0
+        MaxTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          QueryStringsConfig:
+            QueryStringBehavior: "none"
+          EnableAcceptEncodingBrotli: false
+          HeadersConfig:
+            HeaderBehavior: "none"
+          CookiesConfig:
+            CookieBehavior: "none"
+          EnableAcceptEncodingGzip: false
+        DefaultTTL: 0
+        Name: "Managed-CachingDisabled"
+  LogsLogStreamEni03384d10fd1f29595all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-03384d10fd1f29595-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  NetworkFirewallFirewallFirewallwebappgroup10networkfirewallvpc:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::NetworkFirewall::Firewall"
+    DeletionPolicy: "Delete"
+    Properties:
+      FirewallPolicyArn: "arn:aws:network-firewall:us-east-1:379353384462:firewall-policy/webapp-group10-firewall-policy"
+      SubnetChangeProtection: false
+      Description: "webapp-group10-network-firewall"
+      AvailabilityZoneChangeProtection: false
+      FirewallName: "webapp-group10-network-firewall-vpc"
+      VpcId: "vpc-0d41df79a62c6e29f"
+      DeleteProtection: true
+      FirewallPolicyChangeProtection: false
+      EnabledAnalysisTypes:
+      - "HTTP_HOST"
+      - "TLS_SNI"
+      Tags: []
+      SubnetMappings:
+      - IPAddressType: "IPV4"
+        SubnetId: "subnet-01c802af5ab604ed6"
+      - IPAddressType: "IPV4"
+        SubnetId: "subnet-0bb4637119add80da"
+      - IPAddressType: "IPV4"
+        SubnetId: "subnet-036fb118a237b276c"
+  IAMManagedPolicyPolicyserviceroleVPCFlowLogsCloudWatchPolicy1778657488666:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "VPCFlowLogs-CloudWatch-Policy-1778657488666"
+      Path: "/service-role/"
+      Description: ""
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "arn:aws:logs:us-east-1:379353384462:log-group:*:log-stream:*"
+          Action:
+          - "logs:CreateLogStream"
+          - "logs:PutLogEvents"
+          Effect: "Allow"
+        - Resource: "arn:aws:logs:us-east-1:379353384462:log-group:*"
+          Action:
+          - "logs:DescribeLogStreams"
+          - "logs:CreateLogGroup"
+          Effect: "Allow"
+        - Resource: "*"
+          Action: "logs:DescribeLogGroups"
+          Effect: "Allow"
+      Roles:
+      - "webapp-grouip10-VPCFlowLogs-Cloudwatch"
+      Users: []
+  ApiGatewayUsagePlan:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::UsagePlan"
+    DeletionPolicy: "Delete"
+    Properties:
+      ApiStages:
+      - Stage: "v1"
+        ApiId: "b5yuv6vqrc"
+        Throttle: {}
+      Quota:
+        Period: "DAY"
+        Limit: 5000
+        Offset: 0
+      Tags: []
+      Throttle:
+        BurstLimit: 60
+        RateLimit: 20
+      UsagePlanName: "webapp-group10-health-check-plan"
+  EC2SubnetWE:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az1"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1a"
+      CidrBlock: "10.0.4.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "webapp-group10-subnet-private1-us-east-1a"
+        Key: "Name"
+  BedrockKnowledgeBase:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Bedrock::KnowledgeBase"
+    DeletionPolicy: "Delete"
+    Properties:
+      StorageConfiguration:
+        OpensearchServerlessConfiguration:
+          CollectionArn: "arn:aws:aoss:us-east-1:379353384462:collection/nksflrlmgqjgl8mvg1t4"
+          VectorIndexName: "bedrock-knowledge-base-default-index"
+          FieldMapping:
+            TextField: "AMAZON_BEDROCK_TEXT"
+            MetadataField: "AMAZON_BEDROCK_METADATA"
+            VectorField: "bedrock-knowledge-base-default-vector"
+        Type: "OPENSEARCH_SERVERLESS"
+      Description: "webapp-group10-kb"
+      KnowledgeBaseConfiguration:
+        Type: "VECTOR"
+        VectorKnowledgeBaseConfiguration:
+          EmbeddingModelArn: "arn:aws:bedrock:us-east-1::foundation-model/cohere.embed-multilingual-v3"
+          EmbeddingModelConfiguration:
+            BedrockEmbeddingModelConfiguration:
+              EmbeddingDataType: "FLOAT32"
+          SupplementalDataStorageConfiguration:
+            SupplementalDataStorageLocations:
+            - SupplementalDataStorageLocationType: "S3"
+              S3Location:
+                URI: "s3://webapp-group10-kb-source"
+      RoleArn: "arn:aws:iam::379353384462:role/service-role/AmazonBedrockExecutionRoleForKnowledgeBase_webapp-group10"
+      Tags: {}
+      Name: "webapp-group10-kb"
+  EC2VPCDHCPOptionsAssociation:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::VPCDHCPOptionsAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      VpcId: "vpc-0d41df79a62c6e29f"
+      DhcpOptionsId: "dopt-070cc7362f3ce53a5"
+  EFSAccessPointCi:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EFS::AccessPoint"
+    DeletionPolicy: "Delete"
+    Properties:
+      FileSystemId: "fs-0ed34a016c3fe7c67"
+      RootDirectory:
+        Path: "/health-check"
+      ClientToken: "console-bcb23f64-0958-442d-86da-f09654c6ecc4"
+      AccessPointTags:
+      - Value: "webapp-group10-lambda-health-check"
+        Key: "Name"
+      PosixUser:
+        Uid: "0"
+        SecondaryGids:
+        - "777"
+        Gid: "0"
+  S3BucketWebappgroup10backendbucket:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Delete"
+    Properties:
+      AbacStatus: "Disabled"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "webapp-group10-backend-bucket"
+      CorsConfiguration:
+        CorsRules:
+        - MaxAge: 3600
+          AllowedMethods:
+          - "GET"
+          AllowedOrigins:
+          - "https://aws.hungtran.id.vn"
+          AllowedHeaders:
+          - "*"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: true
+          BlockedEncryptionTypes:
+            EncryptionType:
+            - "SSE-C"
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+  SecretsManagerSecretOK:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::SecretsManager::Secret"
+    DeletionPolicy: "Delete"
+    Properties:
+      ReplicaRegions: []
+      Tags: []
+      Name: "webapp-group10/backend/JWKS_KEY"
+  EFSFileSystem:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EFS::FileSystem"
+    DeletionPolicy: "Delete"
+    Properties:
+      KmsKeyId: "arn:aws:kms:us-east-1:379353384462:key/6d4d49a2-984c-4569-a9f4-95f5bfd1d51f"
+      PerformanceMode: "generalPurpose"
+      Encrypted: true
+      FileSystemTags:
+      - Value: ""
+        Key: "Name"
+      FileSystemProtection:
+        ReplicationOverwriteProtection: "ENABLED"
+      LifecyclePolicies:
+      - TransitionToIA: "AFTER_30_DAYS"
+      - TransitionToArchive: "AFTER_90_DAYS"
+      ThroughputMode: "elastic"
+      BackupPolicy:
+        Status: "ENABLED"
+  LogsLogStreamEni09fbbfa6523ab50c8all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-09fbbfa6523ab50c8-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  ApiGatewayStageV1:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Stage"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+      DeploymentId: "rjlfc1"
+      StageName: "v1"
+      CacheClusterSize: "0.5"
+      TracingEnabled: false
+      CacheClusterEnabled: false
+  LogsLogStreamEni0d56a304a12bfbc2dall:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-0d56a304a12bfbc2d-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  EC2SubnetNetworkAclAssociationJQ:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-0f2a988b1fc29cd16"
+  BackupBackupSelection:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Backup::BackupSelection"
+    DeletionPolicy: "Delete"
+    Properties:
+      BackupSelection:
+        ListOfTags: []
+        NotResources: []
+        IamRoleArn: "arn:aws:iam::379353384462:role/service-role/AWSBackupDefaultServiceRole"
+        Resources:
+        - "arn:aws:cloudformation:*:*:stack/*"
+        - "arn:aws:elasticfilesystem:us-east-1:379353384462:file-system/fs-0ed34a016c3fe7c67"
+        - "arn:aws:rds:us-east-1:379353384462:db:webapp-group10-database"
+        - "arn:aws:s3:::webapp-group10-app-bucket"
+        - "arn:aws:s3:::webapp-group10-backend-env"
+        - "arn:aws:s3:::webapp-group10-frontend-bucket"
+        - "arn:aws:s3:::webapp-group10-kb-source"
+        - "arn:aws:s3:::webapp-group10-multimedia-kb"
+        Conditions:
+          StringEquals: []
+          StringNotLike: []
+          StringLike: []
+          StringNotEquals: []
+        SelectionName: "webapp-group10-backup-resources"
+      BackupPlanId: "fb247858-2f16-4297-ab40-d68aee9edb12"
+  LogsLogStreamEni09586d718bbd0dcc6all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-09586d718bbd0dcc6-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  SecretsManagerSecretPB:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::SecretsManager::Secret"
+    DeletionPolicy: "Delete"
+    Properties:
+      ReplicaRegions: []
+      Tags: []
+      Name: "webapp-group10/backend/bedrock"
+  LogsLogStreamEni0ba92324fdb3fef62all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-0ba92324fdb3fef62-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  EC2SubnetNetworkAclAssociationAj:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-0cfb0331238aa03b9"
+  WAFv2WebACLCLOUDFRONT:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::WAFv2::WebACL"
+    DeletionPolicy: "Delete"
+    Properties:
+      Description: ""
+      DefaultAction:
+        Allow: {}
+      Scope: "CLOUDFRONT"
+      OnSourceDDoSProtectionConfig:
+        ALBLowReputationMode: "ACTIVE_UNDER_DDOS"
+      Rules:
+      - OverrideAction:
+          Count: {}
+        RuleLabels: []
+        VisibilityConfig:
+          SampledRequestsEnabled: true
+          MetricName: "AWS-AWSManagedRulesAntiDDoSRuleSet"
+          CloudWatchMetricsEnabled: true
+        Priority: 0
+        Statement:
+          ManagedRuleGroupStatement:
+            ManagedRuleGroupConfigs:
+            - AWSManagedRulesAntiDDoSRuleSet:
+                ClientSideActionConfig:
+                  Challenge:
+                    UsageOfAction: "ENABLED"
+                    Sensitivity: "HIGH"
+                    ExemptUriRegularExpressions:
+                    - RegexString: "\\/api\\/|\\.(acc|avi|css|gif|ico|jpe?g|js|json|mp[34]|ogg|otf|pdf|png|tiff?|ttf|webm|webp|woff2?|xml)$"
+                SensitivityToBlock: "LOW"
+            VendorName: "AWS"
+            RuleActionOverrides: []
+            ExcludedRules: []
+            Name: "AWSManagedRulesAntiDDoSRuleSet"
+        Name: "AWS-AWSManagedRulesAntiDDoSRuleSet"
+      - Action:
+          Count: {}
+        RuleLabels: []
+        VisibilityConfig:
+          SampledRequestsEnabled: true
+          MetricName: "AWS-RateBasedRule-IP-500-CreatedByCloudFront"
+          CloudWatchMetricsEnabled: true
+        Priority: 1
+        Statement:
+          RateBasedStatement:
+            AggregateKeyType: "IP"
+            EvaluationWindowSec: 300
+            Limit: 500
+        Name: "AWS-RateBasedRule-IP-500-CreatedByCloudFront"
+      - OverrideAction:
+          Count: {}
+        RuleLabels: []
+        VisibilityConfig:
+          SampledRequestsEnabled: true
+          MetricName: "AWS-AWSManagedRulesAmazonIpReputationList"
+          CloudWatchMetricsEnabled: true
+        Priority: 2
+        Statement:
+          ManagedRuleGroupStatement:
+            ManagedRuleGroupConfigs: []
+            VendorName: "AWS"
+            RuleActionOverrides: []
+            ExcludedRules: []
+            Name: "AWSManagedRulesAmazonIpReputationList"
+        Name: "AWS-AWSManagedRulesAmazonIpReputationList"
+      - OverrideAction:
+          Count: {}
+        RuleLabels: []
+        VisibilityConfig:
+          SampledRequestsEnabled: true
+          MetricName: "AWS-AWSManagedRulesCommonRuleSet"
+          CloudWatchMetricsEnabled: true
+        Priority: 3
+        Statement:
+          ManagedRuleGroupStatement:
+            ManagedRuleGroupConfigs: []
+            VendorName: "AWS"
+            RuleActionOverrides: []
+            ExcludedRules: []
+            Name: "AWSManagedRulesCommonRuleSet"
+        Name: "AWS-AWSManagedRulesCommonRuleSet"
+      - OverrideAction:
+          Count: {}
+        RuleLabels: []
+        VisibilityConfig:
+          SampledRequestsEnabled: true
+          MetricName: "AWS-AWSManagedRulesKnownBadInputsRuleSet"
+          CloudWatchMetricsEnabled: true
+        Priority: 4
+        Statement:
+          ManagedRuleGroupStatement:
+            ManagedRuleGroupConfigs: []
+            VendorName: "AWS"
+            RuleActionOverrides: []
+            ExcludedRules: []
+            Name: "AWSManagedRulesKnownBadInputsRuleSet"
+        Name: "AWS-AWSManagedRulesKnownBadInputsRuleSet"
+      - OverrideAction:
+          Count: {}
+        RuleLabels: []
+        VisibilityConfig:
+          SampledRequestsEnabled: true
+          MetricName: "AWS-AWSManagedRulesSQLiRuleSet"
+          CloudWatchMetricsEnabled: true
+        Priority: 5
+        Statement:
+          ManagedRuleGroupStatement:
+            ManagedRuleGroupConfigs: []
+            VendorName: "AWS"
+            RuleActionOverrides: []
+            ExcludedRules: []
+            Name: "AWSManagedRulesSQLiRuleSet"
+        Name: "AWS-AWSManagedRulesSQLiRuleSet"
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        MetricName: "CreatedByCloudFront-b5b7186c"
+        CloudWatchMetricsEnabled: true
+      Name: "CreatedByCloudFront-b5b7186c"
+  EFSMountTarget:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EFS::MountTarget"
+    DeletionPolicy: "Delete"
+    Properties:
+      SecurityGroups:
+      - "sg-0eb46af8830cb636f"
+      FileSystemId: "fs-0ed34a016c3fe7c67"
+      IpAddress: "10.0.9.231"
+      SubnetId: "subnet-0148c1ed9dd01ab02"
+  ApiGatewayDeployment:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Deployment"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+  IAMRoleAWSServiceRoleForECS:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Delete"
+    Properties:
+      Path: "/aws-service-role/ecs.amazonaws.com/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/aws-service-role/AmazonECSServiceRolePolicy"
+      MaxSessionDuration: 3600
+      RoleName: "AWSServiceRoleForECS"
+      Description: "Policy to enable Amazon ECS to manage your EC2 instances and related\
+        \ resources."
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "ecs.amazonaws.com"
+  ECSCapacityProviderFARGATESPOT:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ECS::CapacityProvider"
+    DeletionPolicy: "Delete"
+    Properties:
+      Tags: []
+      Name: "FARGATE_SPOT"
+  ElasticLoadBalancingV2LoadBalancerLoadbalancerappwebappgroup10internalalbe80e0c8188a63acc:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    DeletionPolicy: "Delete"
+    Properties:
+      IpAddressType: "ipv4"
+      SecurityGroups:
+      - "sg-05d727a0a7ba0db98"
+      LoadBalancerAttributes:
+      - Value: ""
+        Key: "access_logs.s3.prefix"
+      - Value: "append"
+        Key: "routing.http.xff_header_processing.mode"
+      - Value: "true"
+        Key: "routing.http2.enabled"
+      - Value: "false"
+        Key: "waf.fail_open.enabled"
+      - Value: ""
+        Key: "connection_logs.s3.bucket"
+      - Value: "false"
+        Key: "access_logs.s3.enabled"
+      - Value: "false"
+        Key: "zonal_shift.config.enabled"
+      - Value: "defensive"
+        Key: "routing.http.desync_mitigation_mode"
+      - Value: ""
+        Key: "connection_logs.s3.prefix"
+      - Value: ""
+        Key: "health_check_logs.s3.prefix"
+      - Value: "false"
+        Key: "routing.http.x_amzn_tls_version_and_cipher_suite.enabled"
+      - Value: "false"
+        Key: "routing.http.preserve_host_header.enabled"
+      - Value: "true"
+        Key: "load_balancing.cross_zone.enabled"
+      - Value: "false"
+        Key: "health_check_logs.s3.enabled"
+      - Value: ""
+        Key: "health_check_logs.s3.bucket"
+      - Value: "false"
+        Key: "routing.http.xff_client_port.enabled"
+      - Value: ""
+        Key: "access_logs.s3.bucket"
+      - Value: "false"
+        Key: "deletion_protection.enabled"
+      - Value: "3600"
+        Key: "client_keep_alive.seconds"
+      - Value: "false"
+        Key: "routing.http.drop_invalid_header_fields.enabled"
+      - Value: "false"
+        Key: "connection_logs.s3.enabled"
+      - Value: "60"
+        Key: "idle_timeout.timeout_seconds"
+      Subnets:
+      - "subnet-06dcc80d7d195dc30"
+      - "subnet-0b3f9298716bfb3c4"
+      - "subnet-0cfb0331238aa03b9"
+      Type: "application"
+      Scheme: "internal"
+      EnablePrefixForIpv6SourceNat: "off"
+      Tags: []
+      Name: "webapp-group10-internal-alb"
+      SubnetMappings:
+      - SubnetId: "subnet-0cfb0331238aa03b9"
+      - SubnetId: "subnet-0b3f9298716bfb3c4"
+      - SubnetId: "subnet-06dcc80d7d195dc30"
+  EC2SubnetDo:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az1"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1a"
+      CidrBlock: "10.0.1.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "webapp-group10-subnet-public1-us-east-1a"
+        Key: "Name"
+  S3BucketPolicyWebappgroup10frontendbucket:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::S3::BucketPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      Bucket: "webapp-group10-frontend-bucket"
+      PolicyDocument:
+        Version: "2008-10-17"
+        Statement:
+        - Condition:
+            StringEquals:
+              AWS:SourceArn: "arn:aws:cloudfront::379353384462:distribution/ET0VNSLVCHSKQ"
+          Resource: "arn:aws:s3:::webapp-group10-frontend-bucket/*"
+          Action: "s3:GetObject"
+          Effect: "Allow"
+          Principal:
+            Service: "cloudfront.amazonaws.com"
+          Sid: "AllowCloudFrontServicePrincipal"
+        Id: "PolicyForCloudFrontPrivateContent"
+  EC2SubnetNetworkAclAssociationYt:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    DeletionPolicy: "Delete"
+    Properties:
+      NetworkAclId: "acl-048798c1ee17081e3"
+      SubnetId: "subnet-06dcc80d7d195dc30"
+  SecretsManagerSecretPP:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::SecretsManager::Secret"
+    DeletionPolicy: "Delete"
+    Properties:
+      ReplicaRegions: []
+      Tags: []
+      Name: "webapp-group10/backend/AUTH_SECRET"
+  LogsLogStreamEni01185a509b9fd4a21all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-01185a509b9fd4a21-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  EC2SubnetUX:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az4"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1c"
+      CidrBlock: "10.0.6.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "webapp-group10-subnet-private3-us-east-1c"
+        Key: "Name"
+  ApiGatewayDeploymentEU:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Deployment"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+  EFSMountTargetVY:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EFS::MountTarget"
+    DeletionPolicy: "Delete"
+    Properties:
+      SecurityGroups:
+      - "sg-0eb46af8830cb636f"
+      FileSystemId: "fs-0ed34a016c3fe7c67"
+      IpAddress: "10.0.10.128"
+      SubnetId: "subnet-036fb118a237b276c"
+  ApiGatewayModel:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Model"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+      Description: "This is a default empty schema model"
+      ContentType: "application/json"
+      Schema:
+        $schema: "http://json-schema.org/draft-04/schema#"
+        title: "Empty Schema"
+        type: "object"
+      Name: "Empty"
+  EC2SubnetUT:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties:
+      MapPublicIpOnLaunch: false
+      EnableDns64: false
+      VpcId: "vpc-0d41df79a62c6e29f"
+      AvailabilityZoneId: "use1-az4"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1c"
+      CidrBlock: "10.0.12.0/24"
+      Ipv6Native: false
+      Tags:
+      - Value: "az3-use1-network-firewall-subnet"
+        Key: "Name"
+  LogsLogGrouproute53awshungtranidvn:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogGroup"
+    DeletionPolicy: "Delete"
+    Properties:
+      FieldIndexPolicies: []
+      LogGroupClass: "STANDARD"
+      LogGroupName: "/route53/aws-hungtran-id-vn"
+      BearerTokenAuthenticationEnabled: false
+      DeletionProtectionEnabled: false
+      DataProtectionPolicy: {}
+  BedrockDataSource:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Bedrock::DataSource"
+    DeletionPolicy: "Delete"
+    Properties:
+      DataDeletionPolicy: "DELETE"
+      KnowledgeBaseId: "9OK4SPYXVP"
+      VectorIngestionConfiguration:
+        ParsingConfiguration:
+          ParsingStrategy: "BEDROCK_FOUNDATION_MODEL"
+          BedrockFoundationModelConfiguration:
+            ModelArn: "arn:aws:bedrock:us-east-1:379353384462:inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+            ParsingModality: "MULTIMODAL"
+      DataSourceConfiguration:
+        Type: "S3"
+        S3Configuration:
+          BucketArn: "arn:aws:s3:::webapp-group10-multimedia-kb"
+          InclusionPrefixes:
+          - "rag-documents/"
+      Name: "knowledge-base-quick-start-ptvok-data-source"
+  CloudFrontDistribution:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::CloudFront::Distribution"
+    DeletionPolicy: "Delete"
+    Properties:
+      DistributionConfig:
+        Logging:
+          IncludeCookies: false
+          Bucket: ""
+          Prefix: ""
+        Comment: ""
+        DefaultRootObject: "index.html"
+        Origins:
+        - ConnectionTimeout: 10
+          OriginAccessControlId: "E2HCPZGMXVV8Q"
+          ConnectionAttempts: 3
+          OriginCustomHeaders: []
+          DomainName: "webapp-group10-frontend-bucket.s3.us-east-1.amazonaws.com"
+          OriginShield:
+            Enabled: true
+            OriginShieldRegion: "us-east-1"
+          S3OriginConfig:
+            OriginReadTimeout: 30
+            OriginAccessIdentity: ""
+          OriginPath: ""
+          Id: "webapp-group10-frontend-bucket.s3.us-east-1.amazonaws.com"
+        - ConnectionTimeout: 10
+          OriginAccessControlId: ""
+          ConnectionAttempts: 3
+          OriginCustomHeaders: []
+          DomainName: "b5yuv6vqrc.execute-api.us-east-1.amazonaws.com"
+          OriginShield:
+            Enabled: false
+          OriginPath: "/v1"
+          Id: "b5yuv6vqrc.execute-api.us-east-1.amazonaws.com"
+          CustomOriginConfig:
+            IpAddressType: "ipv4"
+            OriginReadTimeout: 30
+            HTTPSPort: 443
+            OriginKeepaliveTimeout: 5
+            OriginSSLProtocols:
+            - "TLSv1.2"
+            HTTPPort: 80
+            OriginProtocolPolicy: "https-only"
+        - ConnectionTimeout: 10
+          OriginAccessControlId: ""
+          ConnectionAttempts: 3
+          OriginCustomHeaders: []
+          DomainName: "internal-webapp-group10-internal-alb-1713658819.us-east-1.elb.amazonaws.com"
+          OriginShield:
+            Enabled: false
+          VpcOriginConfig:
+            OriginKeepaliveTimeout: 5
+            OriginReadTimeout: 30
+            VpcOriginId: "vo_DkzucAhOK5gBYM7AUpknro"
+          OriginPath: ""
+          Id: "webapp-group10-vpc-origin-alb"
+        ViewerCertificate:
+          MinimumProtocolVersion: "TLSv1.2_2021"
+          SslSupportMethod: "sni-only"
+          CloudFrontDefaultCertificate: false
+          AcmCertificateArn: "arn:aws:acm:us-east-1:379353384462:certificate/910420fc-8c35-4b1e-a32f-2577719384a3"
+        PriceClass: "PriceClass_All"
+        DefaultCacheBehavior:
+          Compress: true
+          FunctionAssociations:
+          - FunctionARN: "arn:aws:cloudfront::379353384462:function/webapp-group10-fix"
+            EventType: "viewer-request"
+          LambdaFunctionAssociations: []
+          TargetOriginId: "webapp-group10-frontend-bucket.s3.us-east-1.amazonaws.com"
+          ViewerProtocolPolicy: "redirect-to-https"
+          GrpcConfig:
+            Enabled: false
+          TrustedSigners: []
+          FieldLevelEncryptionId: ""
+          TrustedKeyGroups: []
+          AllowedMethods:
+          - "HEAD"
+          - "DELETE"
+          - "POST"
+          - "GET"
+          - "OPTIONS"
+          - "PUT"
+          - "PATCH"
+          CachedMethods:
+          - "HEAD"
+          - "GET"
+          SmoothStreaming: false
+          CachePolicyId: "83da9c7e-98b4-4e11-a168-04f0df8e2c65"
+        Staging: false
+        CustomErrorResponses: []
+        ContinuousDeploymentPolicyId: ""
+        OriginGroups:
+          Quantity: 0
+          Items: []
+        Enabled: true
+        Aliases:
+        - "aws.hungtran.id.vn"
+        IPV6Enabled: true
+        WebACLId: "arn:aws:wafv2:us-east-1:379353384462:global/webacl/CreatedByCloudFront-b5b7186c/0e9a3bc1-ac91-4958-89cd-735b032da2aa"
+        HttpVersion: "http2"
+        Restrictions:
+          GeoRestriction:
+            Locations: []
+            RestrictionType: "none"
+        CacheBehaviors:
+        - Compress: true
+          FunctionAssociations: []
+          LambdaFunctionAssociations: []
+          TargetOriginId: "b5yuv6vqrc.execute-api.us-east-1.amazonaws.com"
+          ViewerProtocolPolicy: "redirect-to-https"
+          GrpcConfig:
+            Enabled: false
+          TrustedSigners: []
+          FieldLevelEncryptionId: ""
+          TrustedKeyGroups: []
+          AllowedMethods:
+          - "HEAD"
+          - "GET"
+          PathPattern: "/health"
+          CachedMethods:
+          - "HEAD"
+          - "GET"
+          SmoothStreaming: false
+          OriginRequestPolicyId: "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+          CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+        - Compress: true
+          FunctionAssociations: []
+          LambdaFunctionAssociations: []
+          TargetOriginId: "b5yuv6vqrc.execute-api.us-east-1.amazonaws.com"
+          ViewerProtocolPolicy: "redirect-to-https"
+          GrpcConfig:
+            Enabled: false
+          TrustedSigners: []
+          FieldLevelEncryptionId: ""
+          TrustedKeyGroups: []
+          AllowedMethods:
+          - "HEAD"
+          - "GET"
+          PathPattern: "/health-check"
+          CachedMethods:
+          - "HEAD"
+          - "GET"
+          SmoothStreaming: false
+          OriginRequestPolicyId: "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+          CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+        - Compress: true
+          FunctionAssociations: []
+          LambdaFunctionAssociations: []
+          TargetOriginId: "webapp-group10-vpc-origin-alb"
+          ViewerProtocolPolicy: "redirect-to-https"
+          GrpcConfig:
+            Enabled: false
+          TrustedSigners: []
+          FieldLevelEncryptionId: ""
+          TrustedKeyGroups: []
+          AllowedMethods:
+          - "HEAD"
+          - "DELETE"
+          - "POST"
+          - "GET"
+          - "OPTIONS"
+          - "PUT"
+          - "PATCH"
+          PathPattern: "/api/*"
+          CachedMethods:
+          - "HEAD"
+          - "GET"
+          SmoothStreaming: false
+          OriginRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
+          CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+        - Compress: true
+          FunctionAssociations: []
+          LambdaFunctionAssociations: []
+          TargetOriginId: "webapp-group10-vpc-origin-alb"
+          ViewerProtocolPolicy: "redirect-to-https"
+          GrpcConfig:
+            Enabled: false
+          TrustedSigners: []
+          FieldLevelEncryptionId: ""
+          TrustedKeyGroups: []
+          AllowedMethods:
+          - "HEAD"
+          - "DELETE"
+          - "POST"
+          - "GET"
+          - "OPTIONS"
+          - "PUT"
+          - "PATCH"
+          PathPattern: "/ws/*"
+          CachedMethods:
+          - "HEAD"
+          - "GET"
+          SmoothStreaming: false
+          CachePolicyId: "83da9c7e-98b4-4e11-a168-04f0df8e2c65"
+        - Compress: true
+          FunctionAssociations:
+          - FunctionARN: "arn:aws:cloudfront::379353384462:function/webapp-group10-fix"
+            EventType: "viewer-request"
+          LambdaFunctionAssociations: []
+          TargetOriginId: "webapp-group10-frontend-bucket.s3.us-east-1.amazonaws.com"
+          ViewerProtocolPolicy: "redirect-to-https"
+          GrpcConfig:
+            Enabled: false
+          TrustedSigners: []
+          FieldLevelEncryptionId: ""
+          TrustedKeyGroups: []
+          AllowedMethods:
+          - "HEAD"
+          - "GET"
+          PathPattern: "/*"
+          CachedMethods:
+          - "HEAD"
+          - "GET"
+          SmoothStreaming: false
+          CachePolicyId: "658327ea-f89d-4fab-a63d-7e88639e58f6"
+      Tags:
+      - Value: "webapp-group10-distribution"
+        Key: "Name"
+  EFSMountTargetMu:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EFS::MountTarget"
+    DeletionPolicy: "Delete"
+    Properties:
+      SecurityGroups:
+      - "sg-0eb46af8830cb636f"
+      FileSystemId: "fs-0ed34a016c3fe7c67"
+      IpAddress: "10.0.11.11"
+      SubnetId: "subnet-01c802af5ab604ed6"
+  ECRRepositoryWebappgroup10backend:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ECR::Repository"
+    DeletionPolicy: "Delete"
+    Properties:
+      ImageScanningConfiguration:
+        ScanOnPush: false
+      RepositoryName: "webapp-group10/backend"
+      EncryptionConfiguration:
+        EncryptionType: "AES256"
+      Tags: []
+      ImageTagMutability: "MUTABLE"
+  RDSDBParameterGroupDisablesslpostgresqldatabase:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::RDS::DBParameterGroup"
+    DeletionPolicy: "Delete"
+    Properties:
+      DBParameterGroupName: "disable-ssl-postgresql-database"
+      Family: "postgres18"
+      Description: "disable-ssl-postgresql-database"
+      Parameters:
+        rds.force_ssl: "0"
+  EC2FlowLogRD:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::FlowLog"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogFormat: "${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport}\
+        \ ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}\
+        \ ${ecs-cluster-name} ${ecs-cluster-arn} ${ecs-container-instance-id} ${ecs-container-instance-arn}\
+        \ ${ecs-service-name} ${ecs-task-definition-arn} ${ecs-task-id} ${ecs-task-arn}\
+        \ ${ecs-container-id} ${ecs-second-container-id}"
+      ResourceId: "subnet-0f2a988b1fc29cd16"
+      MaxAggregationInterval: 60
+      ResourceType: "Subnet"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+      DeliverLogsPermissionArn: "arn:aws:iam::379353384462:role/service-role/webapp-grouip10-VPCFlowLogs-Cloudwatch"
+      LogDestinationType: "cloud-watch-logs"
+      Tags:
+      - Value: "webapp-group10-subnet-database2-us-east-1b"
+        Key: "Name"
+      TrafficType: "ALL"
+  IAMManagedPolicyPolicyserviceroleAmazonBedrockFoundationModelPolicyForKnowledgeBasewebappgroup10:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "AmazonBedrockFoundationModelPolicyForKnowledgeBase_webapp-group10"
+      Path: "/service-role/"
+      Description: ""
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource:
+          - "arn:aws:bedrock:us-east-1::foundation-model/cohere.embed-multilingual-v3"
+          Action:
+          - "bedrock:InvokeModel"
+          Effect: "Allow"
+          Sid: "BedrockInvokeModelStatement"
+        - Condition:
+            StringEquals:
+              aws:CalledViaLast: "bedrock.amazonaws.com"
+          Resource: "*"
+          Action:
+          - "aws-marketplace:Subscribe"
+          - "aws-marketplace:ViewSubscriptions"
+          - "aws-marketplace:Unsubscribe"
+          Effect: "Allow"
+          Sid: "MarketplaceOperationsFromBedrockFor3pModels"
+      Roles:
+      - "AmazonBedrockExecutionRoleForKnowledgeBase_webapp-group10"
+      Users: []
+  ElasticLoadBalancingV2TargetGroupTargetgroupwebappgroup10targetgroup2bf4e9b1c35700778:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    DeletionPolicy: "Delete"
+    Properties:
+      IpAddressType: "ipv4"
+      HealthCheckIntervalSeconds: 60
+      Matcher:
+        HttpCode: "200"
+      HealthCheckPath: "/api/v1/health"
+      Port: 8000
+      Targets:
+      - AvailabilityZone: "us-east-1c"
+        Port: 8000
+        Id: "10.0.6.113"
+      - AvailabilityZone: "us-east-1a"
+        Port: 8000
+        Id: "10.0.4.122"
+      - AvailabilityZone: "us-east-1a"
+        Port: 8000
+        Id: "10.0.4.136"
+      - AvailabilityZone: "us-east-1b"
+        Port: 8000
+        Id: "10.0.5.15"
+      - AvailabilityZone: "us-east-1c"
+        Port: 8000
+        Id: "10.0.6.43"
+      - AvailabilityZone: "us-east-1c"
+        Port: 8000
+        Id: "10.0.6.211"
+      - AvailabilityZone: "us-east-1b"
+        Port: 8000
+        Id: "10.0.5.213"
+      - AvailabilityZone: "us-east-1b"
+        Port: 8000
+        Id: "10.0.5.54"
+      - AvailabilityZone: "us-east-1a"
+        Port: 8000
+        Id: "10.0.4.241"
+      HealthCheckEnabled: true
+      ProtocolVersion: "HTTP1"
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 40
+      Name: "webapp-group10-target-group-2"
+      VpcId: "vpc-0d41df79a62c6e29f"
+      HealthyThresholdCount: 5
+      HealthCheckProtocol: "HTTP"
+      TargetGroupAttributes:
+      - Value: "86400"
+        Key: "stickiness.app_cookie.duration_seconds"
+      - Value: "true"
+        Key: "stickiness.enabled"
+      - Value: "1"
+        Key: "target_group_health.dns_failover.minimum_healthy_targets.count"
+      - Value: "use_load_balancer_configuration"
+        Key: "load_balancing.cross_zone.enabled"
+      - Value: "app_cookie"
+        Key: "stickiness.type"
+      - Value: "86400"
+        Key: "stickiness.lb_cookie.duration_seconds"
+      - Value: "off"
+        Key: "target_group_health.dns_failover.minimum_healthy_targets.percentage"
+      - Value: "off"
+        Key: "target_group_health.unhealthy_state_routing.minimum_healthy_targets.percentage"
+      - Value: "0"
+        Key: "slow_start.duration_seconds"
+      - Value: "300"
+        Key: "deregistration_delay.timeout_seconds"
+      - Value: "1"
+        Key: "target_group_health.unhealthy_state_routing.minimum_healthy_targets.count"
+      - Value: "off"
+        Key: "load_balancing.algorithm.anomaly_mitigation"
+      - Value: "websocket-group10"
+        Key: "stickiness.app_cookie.cookie_name"
+      - Value: "round_robin"
+        Key: "load_balancing.algorithm.type"
+      TargetType: "ip"
+      HealthCheckPort: "traffic-port"
+      Protocol: "HTTP"
+      Tags: []
+  SecretsManagerSecretYC:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::SecretsManager::Secret"
+    DeletionPolicy: "Delete"
+    Properties:
+      ReplicaRegions: []
+      Tags: []
+      Name: "webapp-group10/backend/DATABASE_URL"
+  EC2FlowLogRM:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::FlowLog"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogFormat: "${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport}\
+        \ ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}\
+        \ ${ecs-cluster-name} ${ecs-cluster-arn} ${ecs-container-instance-id} ${ecs-container-instance-arn}\
+        \ ${ecs-service-name} ${ecs-task-definition-arn} ${ecs-task-id} ${ecs-task-arn}\
+        \ ${ecs-container-id} ${ecs-second-container-id}"
+      ResourceId: "subnet-0fb7a267051a465ee"
+      MaxAggregationInterval: 60
+      ResourceType: "Subnet"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+      DeliverLogsPermissionArn: "arn:aws:iam::379353384462:role/service-role/webapp-grouip10-VPCFlowLogs-Cloudwatch"
+      LogDestinationType: "cloud-watch-logs"
+      Tags:
+      - Value: "webapp-group10-subnet-database1-us-east-1a"
+        Key: "Name"
+      TrafficType: "ALL"
+  SecretsManagerSecretIN:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::SecretsManager::Secret"
+    DeletionPolicy: "Delete"
+    Properties:
+      ReplicaRegions: []
+      Tags: []
+      Name: "webapp-group10/backend/redis"
+  LogsLogStreamEni000115108ef48feeeall:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-000115108ef48feee-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  IAMRoleAmazonBedrockExecutionRoleForKnowledgeBasewebappgroup10:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Delete"
+    Properties:
+      Path: "/service-role/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::379353384462:policy/service-role/AmazonBedrockOSSPolicyForKnowledgeBase_webapp-group10"
+      - "arn:aws:iam::379353384462:policy/service-role/AmazonBedrockInferenceProfilePolicyForKnowledgeBase_webapp-group10"
+      - "arn:aws:iam::379353384462:policy/service-role/AmazonBedrockS3PolicyForKnowledgeBase_webapp-group10"
+      - "arn:aws:iam::379353384462:policy/service-role/AmazonBedrockFoundationModelPolicyForKnowledgeBase_webapp-group10"
+      MaxSessionDuration: 3600
+      RoleName: "AmazonBedrockExecutionRoleForKnowledgeBase_webapp-group10"
+      Description: "Bedrock Knowledge Base access"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Condition:
+            StringEquals:
+              aws:SourceAccount: "379353384462"
+            ArnLike:
+              aws:SourceArn: "arn:aws:bedrock:us-east-1:379353384462:knowledge-base/*"
+          Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "bedrock.amazonaws.com"
+          Sid: "AmazonBedrockKnowledgeBaseTrustPolicy"
+  RDSDBSubnetGroupWebappgroup10rdssubnetgroup:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::RDS::DBSubnetGroup"
+    DeletionPolicy: "Delete"
+    Properties:
+      DBSubnetGroupDescription: "webapp-group10-rds-subnet-group"
+      SubnetIds:
+      - "subnet-0f2a988b1fc29cd16"
+      - "subnet-0148c1ed9dd01ab02"
+      - "subnet-0fb7a267051a465ee"
+      DBSubnetGroupName: "webapp-group10-rds-subnet-group"
+  ApiGatewayDeploymentDH:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Deployment"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+  IAMRoleAWSBackupDefaultServiceRole:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Delete"
+    Properties:
+      Path: "/service-role/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
+      - "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+      - "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Restore"
+      - "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores"
+      MaxSessionDuration: 3600
+      RoleName: "AWSBackupDefaultServiceRole"
+      Description: "Provides AWS Backup permission to create backups and perform restores\
+        \ on your behalf across AWS services"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "backup.amazonaws.com"
+  CloudFrontFunctionFunctionwebappgroup10fix:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::CloudFront::Function"
+    DeletionPolicy: "Delete"
+    Properties:
+      FunctionConfig:
+        Comment: ""
+        Runtime: "cloudfront-js-2.0"
+      FunctionCode: "  function handler(event) {\r\n    var request = event.request;\r\
+        \n    var uri = request.uri;\r\n    if (uri !== '/' && !uri.includes('.')\
+        \ && !uri.endsWith('/')) {\r\n      request.uri = uri + '.html';\r\n    }\r\
+        \n    return request;\r\n  }"
+      FunctionMetadata: {}
+      Tags: []
+      Name: "webapp-group10-fix"
+  ApiGatewayDeploymentCo:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::ApiGateway::Deployment"
+    DeletionPolicy: "Delete"
+    Properties:
+      RestApiId: "b5yuv6vqrc"
+  LogsLogStreamEni080c64641491b39a2all:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::Logs::LogStream"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogStreamName: "eni-080c64641491b39a2-all"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+  EC2FlowLogJ6:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::EC2::FlowLog"
+    DeletionPolicy: "Delete"
+    Properties:
+      LogFormat: "${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport}\
+        \ ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}\
+        \ ${ecs-cluster-name} ${ecs-cluster-arn} ${ecs-container-instance-id} ${ecs-container-instance-arn}\
+        \ ${ecs-service-name} ${ecs-task-definition-arn} ${ecs-task-id} ${ecs-task-arn}\
+        \ ${ecs-container-id} ${ecs-second-container-id}"
+      ResourceId: "subnet-0148c1ed9dd01ab02"
+      MaxAggregationInterval: 60
+      ResourceType: "Subnet"
+      LogGroupName: "webapp-group10-database-subnets-vpc-flow-log"
+      DeliverLogsPermissionArn: "arn:aws:iam::379353384462:role/service-role/webapp-grouip10-VPCFlowLogs-Cloudwatch"
+      LogDestinationType: "cloud-watch-logs"
+      Tags:
+      - Value: "webapp-group10-subnet-database3-us-east-1c"
+        Key: "Name"
+      TrafficType: "ALL"

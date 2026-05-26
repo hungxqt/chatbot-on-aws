@@ -1,0 +1,506 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Data layer - RDS PostgreSQL, ElastiCache Redis, EFS, S3, Secrets Manager, Bedrock KB, CloudWatch"
+
+Parameters:
+  ProjectName:
+    Type: String
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet3Id:
+    Type: AWS::EC2::Subnet::Id
+  DatabaseSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+  DatabaseSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+  DatabaseSubnet3Id:
+    Type: AWS::EC2::Subnet::Id
+  RdsSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  RedisSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  EfsSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  RdsSubnetGroupName:
+    Type: String
+  RdsMonitoringRoleArn:
+    Type: String
+  KmsRdsKeyArn:
+    Type: String
+  KmsEfsKeyArn:
+    Type: String
+  EnableRdsSsl:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: "Enable SSL enforcement on RDS PostgreSQL"
+  RdsMasterUsername:
+    Type: String
+    Default: postgres
+    Description: "Master username for RDS PostgreSQL"
+    MinLength: 1
+    MaxLength: 63
+  RdsMasterPassword:
+    Type: String
+    NoEcho: true
+    Description: "Master password for RDS PostgreSQL (min 8 characters)"
+    MinLength: 8
+    MaxLength: 128
+Conditions:
+  RdsSslEnabled: !Equals [!Ref EnableRdsSsl, "true"]
+
+Resources:
+  # =============================================================================
+  # 1. RDS PostgreSQL
+  # =============================================================================
+
+  PgParamGroupSslEnabled:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      DBParameterGroupName: !Sub "${ProjectName}-pg18-ssl-enabled"
+      Family: postgres18
+      Description: !Sub "${ProjectName} PostgreSQL 18 parameter group with SSL enabled"
+      Parameters:
+        rds.force_ssl: "1"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-pg18-ssl-enabled"
+
+  PgParamGroupSslDisabled:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      DBParameterGroupName: !Sub "${ProjectName}-pg18-ssl-disabled"
+      Family: postgres18
+      Description: !Sub "${ProjectName} PostgreSQL 18 parameter group with SSL disabled"
+      Parameters:
+        rds.force_ssl: "0"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-pg18-ssl-disabled"
+
+  RdsInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBInstanceIdentifier: !Sub "${ProjectName}-database"
+      Engine: postgres
+      EngineVersion: "18.3"
+      DBInstanceClass: db.m7g.large
+      AllocatedStorage: "100"
+      MaxAllocatedStorage: 1000
+      StorageType: io2
+      Iops: 3000
+      MultiAZ: true
+      MasterUsername: !Ref RdsMasterUsername
+      MasterUserPassword: !Ref RdsMasterPassword
+      DBSubnetGroupName: !Ref RdsSubnetGroupName
+      VPCSecurityGroups:
+        - !Ref RdsSecurityGroupId
+      DBParameterGroupName: !If
+        - RdsSslEnabled
+        - !Ref PgParamGroupSslEnabled
+        - !Ref PgParamGroupSslDisabled
+      StorageEncrypted: true
+      KmsKeyId: !Ref KmsRdsKeyArn
+      DeletionProtection: false
+      BackupRetentionPeriod: 35
+      PreferredBackupWindow: "03:17-05:17"
+      MonitoringInterval: 1
+      MonitoringRoleArn: !Ref RdsMonitoringRoleArn
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: 465
+      PerformanceInsightsKMSKeyId: !Ref KmsRdsKeyArn
+      EnableCloudwatchLogsExports:
+        - postgresql
+        - upgrade
+      CopyTagsToSnapshot: true
+      AutoMinorVersionUpgrade: false
+      Port: "5432"
+      DBName: postgres
+      NetworkType: IPV4
+      PubliclyAccessible: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-database"
+
+  # =============================================================================
+  # 2. ElastiCache Serverless Redis
+  # =============================================================================
+
+  RedisServerlessCache:
+    Type: AWS::ElastiCache::ServerlessCache
+    DeletionPolicy: Delete
+    Properties:
+      ServerlessCacheName: !Sub "${ProjectName}-redis"
+      Engine: redis
+      MajorEngineVersion: "7"
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroupId
+      SubnetIds:
+        - !Ref DatabaseSubnet1Id
+        - !Ref DatabaseSubnet2Id
+        - !Ref DatabaseSubnet3Id
+      SnapshotRetentionLimit: 7
+      DailySnapshotTime: "04:30"
+      Description: !Sub "${ProjectName} Redis cache"
+
+  # =============================================================================
+  # 3. EFS File System + Mount Targets + Access Points
+  # =============================================================================
+
+  EfsFileSystem:
+    Type: AWS::EFS::FileSystem
+    DeletionPolicy: Delete
+    Properties:
+      Encrypted: true
+      KmsKeyId: !Ref KmsEfsKeyArn
+      PerformanceMode: generalPurpose
+      ThroughputMode: elastic
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_30_DAYS
+        - TransitionToArchive: AFTER_90_DAYS
+      BackupPolicy:
+        Status: ENABLED
+      FileSystemProtection:
+        ReplicationOverwriteProtection: ENABLED
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-efs"
+
+  EfsMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EfsFileSystem
+      SecurityGroups:
+        - !Ref EfsSecurityGroupId
+      SubnetId: !Ref PrivateSubnet1Id
+
+  EfsMountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EfsFileSystem
+      SecurityGroups:
+        - !Ref EfsSecurityGroupId
+      SubnetId: !Ref PrivateSubnet2Id
+
+  EfsMountTarget3:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EfsFileSystem
+      SecurityGroups:
+        - !Ref EfsSecurityGroupId
+      SubnetId: !Ref PrivateSubnet3Id
+
+  EfsAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref EfsFileSystem
+      RootDirectory:
+        Path: /shared
+        CreationInfo:
+          OwnerUid: "1000"
+          OwnerGid: "1000"
+          Permissions: "0755"
+      PosixUser:
+        Uid: "1000"
+        Gid: "1000"
+      AccessPointTags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-access-point"
+
+  EfsHealthCheckAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref EfsFileSystem
+      RootDirectory:
+        Path: /health-check
+      PosixUser:
+        Uid: "1000"
+        Gid: "1000"
+        SecondaryGids: []
+      AccessPointTags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-lambda-health-check"
+
+  # =============================================================================
+  # 4. S3 Buckets
+  # =============================================================================
+
+  BackendEnvBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "${ProjectName}-backend-env"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  AppBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "${ProjectName}-app-bucket"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "${ProjectName}-frontend-bucket"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  BackendBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "${ProjectName}-backend-bucket"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ["*"]
+            AllowedMethods: [GET]
+            AllowedOrigins: [!Sub "https://${ProjectName}.example.com"]
+            MaxAge: 3600
+
+  KbSourceBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "${ProjectName}-kb-source"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  MultimediaKbBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "${ProjectName}-multimedia-kb"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${FrontendBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
+
+  # =============================================================================
+  # 5. Secrets Manager
+  # =============================================================================
+
+  SecretBackendSecretKey:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    Properties:
+      Name: !Sub "${ProjectName}/backend/SECRET_KEY"
+      Description: !Sub "Backend SECRET_KEY for ${ProjectName}"
+      GenerateSecretString:
+        PasswordLength: 64
+        ExcludeCharacters: "!@#$%^&*()_+-=[]{}|;':\",./<>?"
+
+  SecretBackendApiKey:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    Properties:
+      Name: !Sub "${ProjectName}/backend/API_KEY"
+      Description: !Sub "Backend API_KEY for ${ProjectName}"
+      GenerateSecretString:
+        PasswordLength: 40
+        ExcludeCharacters: "!@#$%^&*()_+-=[]{}|;':\",./<>?"
+
+  SecretBackendDatabase:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    Properties:
+      Name: !Sub "${ProjectName}/backend/database"
+      Description: !Sub "Database credentials placeholder for ${ProjectName} (RDS managed password handles actual creds)"
+
+  SecretBackendRedis:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    Properties:
+      Name: !Sub "${ProjectName}/backend/redis"
+      Description: !Sub "Redis credentials placeholder for ${ProjectName}"
+
+  SecretBackendBedrock:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    Properties:
+      Name: !Sub "${ProjectName}/backend/bedrock"
+      Description: !Sub "Bedrock configuration placeholder for ${ProjectName}"
+
+  SecretBackendAuthSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    Properties:
+      Name: !Sub "${ProjectName}/backend/AUTH_SECRET"
+      Description: !Sub "Backend AUTH_SECRET for ${ProjectName}"
+      GenerateSecretString:
+        PasswordLength: 64
+
+  SecretBackendJwksKey:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    Properties:
+      Name: !Sub "${ProjectName}/backend/JWKS_KEY"
+      Description: !Sub "JWKS key placeholder for ${ProjectName}"
+
+  # =============================================================================
+  # 7. CloudWatch Log Groups
+  # =============================================================================
+
+  EcsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/ecs/${ProjectName}-${AWS::StackName}-task-definition"
+      RetentionInDays: 30
+
+  Route53QueryLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/route53/${ProjectName}-${AWS::StackName}"
+      RetentionInDays: 30
+
+Outputs:
+  RdsEndpoint:
+    Description: "RDS PostgreSQL endpoint address"
+    Value: !GetAtt RdsInstance.Endpoint.Address
+    Export:
+      Name: !Sub "${ProjectName}-RdsEndpoint"
+
+  RdsPort:
+    Description: "RDS PostgreSQL port"
+    Value: !GetAtt RdsInstance.Endpoint.Port
+    Export:
+      Name: !Sub "${ProjectName}-RdsPort"
+
+  RedisEndpoint:
+    Description: "ElastiCache Redis serverless endpoint address"
+    Value: !GetAtt RedisServerlessCache.Endpoint.Address
+    Export:
+      Name: !Sub "${ProjectName}-RedisEndpoint"
+
+  RedisPort:
+    Description: "ElastiCache Redis serverless endpoint port"
+    Value: !GetAtt RedisServerlessCache.Endpoint.Port
+    Export:
+      Name: !Sub "${ProjectName}-RedisPort"
+
+  EfsFileSystemId:
+    Description: "EFS file system ID"
+    Value: !Ref EfsFileSystem
+    Export:
+      Name: !Sub "${ProjectName}-EfsFileSystemId"
+
+  EfsAccessPointId:
+    Description: "EFS shared access point ID"
+    Value: !Ref EfsAccessPoint
+    Export:
+      Name: !Sub "${ProjectName}-EfsAccessPointId"
+
+  EfsHealthCheckAccessPointId:
+    Description: "EFS health check access point ID"
+    Value: !Ref EfsHealthCheckAccessPoint
+    Export:
+      Name: !Sub "${ProjectName}-EfsHealthCheckAccessPointId"
+
+  FrontendBucketDomainName:
+    Description: "S3 frontend bucket regional domain name"
+    Value: !GetAtt FrontendBucket.RegionalDomainName
+    Export:
+      Name: !Sub "${ProjectName}-FrontendBucketDomainName"

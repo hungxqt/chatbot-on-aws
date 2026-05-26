@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Bedrock Knowledge Base with OpenSearch Serverless for webapp-group10"
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: webapp-group10
+
+Resources:
+  OpenSearchEncryptionPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Properties:
+      Name: !Sub "${ProjectName}-kb-encryption"
+      Type: encryption
+      Description: !Sub "Encryption policy for ${ProjectName} Bedrock knowledge base collection"
+      Policy: !Sub >-
+        {"Rules":[{"ResourceType":"collection","Resource":["collection/${ProjectName}-kb-collection"]}],"AWSOwnedKey":true}
+
+  OpenSearchNetworkPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Properties:
+      Name: !Sub "${ProjectName}-kb-network"
+      Type: network
+      Description: !Sub "Network policy for ${ProjectName} Bedrock knowledge base collection"
+      Policy: !Sub >-
+        [{"Rules":[{"ResourceType":"collection","Resource":["collection/${ProjectName}-kb-collection"]},{"ResourceType":"dashboard","Resource":["collection/${ProjectName}-kb-collection"]}],"AllowFromPublic":true}]
+
+  OpenSearchCollection:
+    Type: AWS::OpenSearchServerless::Collection
+    DependsOn:
+      - OpenSearchEncryptionPolicy
+      - OpenSearchNetworkPolicy
+    Properties:
+      Name: !Sub "${ProjectName}-kb-collection"
+      Type: VECTORSEARCH
+      Description: !Sub "${ProjectName} knowledge base vector store"
+
+  BedrockExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "AmazonBedrockExecutionRoleForKnowledgeBase_${ProjectName}"
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AmazonBedrockKnowledgeBaseTrustPolicy
+            Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*"
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectName}-multimedia-kb"
+                  - !Sub "arn:aws:s3:::${ProjectName}-multimedia-kb/*"
+                  - !Sub "arn:aws:s3:::${ProjectName}-kb-source"
+                  - !Sub "arn:aws:s3:::${ProjectName}-kb-source/*"
+        - PolicyName: OpenSearchAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - aoss:APIAccessAll
+                Resource: !GetAtt OpenSearchCollection.Arn
+        - PolicyName: BedrockModelAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:GetInferenceProfile
+                Resource: "*"
+
+  OpenSearchAccessPolicy:
+    Type: AWS::OpenSearchServerless::AccessPolicy
+    Properties:
+      Name: !Sub "${ProjectName}-kb-access"
+      Type: data
+      Description: !Sub "Data access policy for ${ProjectName} Bedrock knowledge base collection"
+      Policy: !Sub >-
+        [{"Description":"Bedrock knowledge base access","Rules":[{"ResourceType":"collection","Resource":["collection/${ProjectName}-kb-collection"],"Permission":["aoss:*"]},{"ResourceType":"index","Resource":["index/${ProjectName}-kb-collection/*"],"Permission":["aoss:*"]}],"Principal":["${BedrockExecutionRole.Arn}","arn:${AWS::Partition}:iam::${AWS::AccountId}:root"]}]
+
+  OpenSearchVectorIndex:
+    Type: AWS::OpenSearchServerless::Index
+    DependsOn:
+      - OpenSearchAccessPolicy
+    Properties:
+      CollectionEndpoint: !GetAtt OpenSearchCollection.CollectionEndpoint
+      IndexName: bedrock-knowledge-base-default-index
+      Settings:
+        Index:
+          Knn: true
+      Mappings:
+        Properties:
+          bedrock-knowledge-base-default-vector:
+            Type: knn_vector
+            Dimension: 1024
+            Method:
+              Name: hnsw
+              Engine: faiss
+              SpaceType: l2
+              Parameters:
+                EfConstruction: 128
+                M: 24
+          AMAZON_BEDROCK_TEXT:
+            Type: text
+            Index: true
+          AMAZON_BEDROCK_METADATA:
+            Type: text
+            Index: false
+
+  KnowledgeBase:
+    Type: AWS::Bedrock::KnowledgeBase
+    DependsOn:
+      - OpenSearchVectorIndex
+    Properties:
+      Name: !Sub "${ProjectName}-kb"
+      Description: !Sub "${ProjectName}-kb"
+      RoleArn: !GetAtt BedrockExecutionRole.Arn
+      KnowledgeBaseConfiguration:
+        Type: VECTOR
+        VectorKnowledgeBaseConfiguration:
+          EmbeddingModelArn: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/cohere.embed-multilingual-v3"
+          EmbeddingModelConfiguration:
+            BedrockEmbeddingModelConfiguration:
+              EmbeddingDataType: FLOAT32
+          SupplementalDataStorageConfiguration:
+            SupplementalDataStorageLocations:
+              - SupplementalDataStorageLocationType: S3
+                S3Location:
+                  URI: !Sub "s3://${ProjectName}-kb-source"
+      StorageConfiguration:
+        Type: OPENSEARCH_SERVERLESS
+        OpensearchServerlessConfiguration:
+          CollectionArn: !GetAtt OpenSearchCollection.Arn
+          VectorIndexName: bedrock-knowledge-base-default-index
+          FieldMapping:
+            TextField: AMAZON_BEDROCK_TEXT
+            MetadataField: AMAZON_BEDROCK_METADATA
+            VectorField: bedrock-knowledge-base-default-vector
+
+  DataSource:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      KnowledgeBaseId: !Ref KnowledgeBase
+      Name: !Sub "${ProjectName}-data-source"
+      DataDeletionPolicy: DELETE
+      DataSourceConfiguration:
+        Type: S3
+        S3Configuration:
+          BucketArn: !Sub "arn:aws:s3:::${ProjectName}-multimedia-kb"
+          InclusionPrefixes:
+            - "rag-documents/"
+      VectorIngestionConfiguration:
+        ParsingConfiguration:
+          ParsingStrategy: BEDROCK_FOUNDATION_MODEL
+          BedrockFoundationModelConfiguration:
+            ModelArn: !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+            ParsingModality: MULTIMODAL
+
+Outputs:
+  KnowledgeBaseId:
+    Description: "Bedrock Knowledge Base ID"
+    Value: !Ref KnowledgeBase
+    Export:
+      Name: !Sub "${ProjectName}-KnowledgeBaseId"
+
+  DataSourceId:
+    Description: "Bedrock Data Source ID"
+    Value: !GetAtt DataSource.DataSourceId
+    Export:
+      Name: !Sub "${ProjectName}-DataSourceId"
+
+  OpenSearchCollectionArn:
+    Description: "OpenSearch Serverless collection ARN"
+    Value: !GetAtt OpenSearchCollection.Arn
+    Export:
+      Name: !Sub "${ProjectName}-OpenSearchCollectionArn"

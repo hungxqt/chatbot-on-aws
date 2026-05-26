@@ -1,0 +1,880 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Network layer for webapp-group10. Creates a multi-AZ VPC with public, private,
+  database, and firewall subnet tiers, an AWS Network Firewall, a regional
+  multi-AZ NAT Gateway, VPC flow logs, and all associated routing and DHCP
+  configuration. Designed as a nested stack consumed by a root template.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  ProjectName:
+    Type: String
+    Default: webapp-group10
+  VpcCidr:
+    Type: String
+    Default: "10.0.0.0/16"
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # =========================================================================
+  # 1. VPC
+  # =========================================================================
+  VPC:
+    Type: AWS::EC2::VPC
+    DeletionPolicy: Delete
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc"
+
+  # =========================================================================
+  # 2. Internet Gateway
+  # =========================================================================
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DeletionPolicy: Delete
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-igw"
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # =========================================================================
+  # 3. Elastic IPs (one per AZ for the regional NAT Gateway)
+  # =========================================================================
+  EIP1:
+    Type: AWS::EC2::EIP
+    DeletionPolicy: Delete
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-eip-az1"
+
+  EIP2:
+    Type: AWS::EC2::EIP
+    DeletionPolicy: Delete
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-eip-az2"
+
+  EIP3:
+    Type: AWS::EC2::EIP
+    DeletionPolicy: Delete
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-eip-az3"
+
+  # =========================================================================
+  # 4. NAT Gateway - Regional multi-AZ
+  # =========================================================================
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    DeletionPolicy: Delete
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      ConnectivityType: public
+      AvailabilityMode: regional
+      VpcId: !Ref VPC
+      AvailabilityZoneAddresses:
+        - AllocationIds:
+            - !GetAtt EIP1.AllocationId
+          AvailabilityZone: !Select [0, !GetAZs ""]
+        - AllocationIds:
+            - !GetAtt EIP2.AllocationId
+          AvailabilityZone: !Select [1, !GetAZs ""]
+        - AllocationIds:
+            - !GetAtt EIP3.AllocationId
+          AvailabilityZone: !Select [2, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-regional-nat"
+
+  # =========================================================================
+  # 5. Subnets - 4 tiers x 3 AZs = 12 subnets
+  # =========================================================================
+
+  # --- Public Subnets ---
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.1.0/24"
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-public1"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.2.0/24"
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-public2"
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.3.0/24"
+      AvailabilityZone: !Select [2, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-public3"
+
+  # --- Private Subnets ---
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.4.0/24"
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-private1"
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.5.0/24"
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-private2"
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.6.0/24"
+      AvailabilityZone: !Select [2, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-private3"
+
+  # --- Database Subnets ---
+  DatabaseSubnet1:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.7.0/24"
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-database1"
+
+  DatabaseSubnet2:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.8.0/24"
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-database2"
+
+  DatabaseSubnet3:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.9.0/24"
+      AvailabilityZone: !Select [2, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-database3"
+
+  # --- Firewall Subnets ---
+  FirewallSubnet1:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.10.0/24"
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-firewall1"
+
+  FirewallSubnet2:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.11.0/24"
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-firewall2"
+
+  FirewallSubnet3:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.0.12.0/24"
+      AvailabilityZone: !Select [2, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-subnet-firewall3"
+
+  # =========================================================================
+  # 6. Route Tables, Routes, and Associations
+  # =========================================================================
+
+  # --- IGW Edge Route Table ---
+  IGWEdgeRouteTable:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rtb-igw-edge"
+
+  IGWEdgeRouteTableAssociation:
+    Type: AWS::EC2::GatewayRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref IGWEdgeRouteTable
+
+  IGWEdgeRouteToFW1:
+    Type: AWS::EC2::Route
+    DeletionPolicy: Delete
+    Properties:
+      RouteTableId: !Ref IGWEdgeRouteTable
+      DestinationCidrBlock: "10.0.1.0/24"
+      VpcEndpointId: !Select [1, !Split [":", !Select [0, !GetAtt NetworkFirewall.EndpointIds]]]
+
+  IGWEdgeRouteToFW2:
+    Type: AWS::EC2::Route
+    DeletionPolicy: Delete
+    Properties:
+      RouteTableId: !Ref IGWEdgeRouteTable
+      DestinationCidrBlock: "10.0.2.0/24"
+      VpcEndpointId: !Select [1, !Split [":", !Select [1, !GetAtt NetworkFirewall.EndpointIds]]]
+
+  IGWEdgeRouteToFW3:
+    Type: AWS::EC2::Route
+    DeletionPolicy: Delete
+    Properties:
+      RouteTableId: !Ref IGWEdgeRouteTable
+      DestinationCidrBlock: "10.0.3.0/24"
+      VpcEndpointId: !Select [1, !Split [":", !Select [2, !GetAtt NetworkFirewall.EndpointIds]]]
+
+  # --- Firewall Route Tables (3, one per AZ) ---
+  FirewallRouteTable1:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rtb-firewall-az1"
+
+  FirewallRouteTable2:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rtb-firewall-az2"
+
+  FirewallRouteTable3:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rtb-firewall-az3"
+
+  FirewallRoute1:
+    Type: AWS::EC2::Route
+    DeletionPolicy: Delete
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref FirewallRouteTable1
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  FirewallRoute2:
+    Type: AWS::EC2::Route
+    DeletionPolicy: Delete
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref FirewallRouteTable2
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  FirewallRoute3:
+    Type: AWS::EC2::Route
+    DeletionPolicy: Delete
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref FirewallRouteTable3
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  FirewallSubnetRTAssoc1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref FirewallSubnet1
+      RouteTableId: !Ref FirewallRouteTable1
+
+  FirewallSubnetRTAssoc2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref FirewallSubnet2
+      RouteTableId: !Ref FirewallRouteTable2
+
+  FirewallSubnetRTAssoc3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref FirewallSubnet3
+      RouteTableId: !Ref FirewallRouteTable3
+
+  # --- Public Route Tables (3, one per AZ) ---
+  PublicRouteTable1:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rtb-public-az1"
+
+  PublicRouteTable2:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rtb-public-az2"
+
+  PublicRouteTable3:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rtb-public-az3"
+
+  PublicRoute1:
+    Type: AWS::EC2::Route
+    DeletionPolicy: Delete
+    Properties:
+      RouteTableId: !Ref PublicRouteTable1
+      DestinationCidrBlock: "0.0.0.0/0"
+      VpcEndpointId: !Select [1, !Split [":", !Select [0, !GetAtt NetworkFirewall.EndpointIds]]]
+
+  PublicRoute2:
+    Type: AWS::EC2::Route
+    DeletionPolicy: Delete
+    Properties:
+      RouteTableId: !Ref PublicRouteTable2
+      DestinationCidrBlock: "0.0.0.0/0"
+      VpcEndpointId: !Select [1, !Split [":", !Select [1, !GetAtt NetworkFirewall.EndpointIds]]]
+
+  PublicRoute3:
+    Type: AWS::EC2::Route
+    DeletionPolicy: Delete
+    Properties:
+      RouteTableId: !Ref PublicRouteTable3
+      DestinationCidrBlock: "0.0.0.0/0"
+      VpcEndpointId: !Select [1, !Split [":", !Select [2, !GetAtt NetworkFirewall.EndpointIds]]]
+
+  PublicSubnetRTAssoc1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable1
+
+  PublicSubnetRTAssoc2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable2
+
+  PublicSubnetRTAssoc3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      RouteTableId: !Ref PublicRouteTable3
+
+  # --- Private Route Table (1, shared across all 3 private subnets) ---
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rtb-private"
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    DeletionPolicy: Delete
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnetRTAssoc1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetRTAssoc2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetRTAssoc3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref PrivateRouteTable
+
+  # --- Database Route Table (1, shared, isolated - no internet routes) ---
+  DatabaseRouteTable:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-rtb-database"
+
+  DatabaseSubnetRTAssoc1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref DatabaseSubnet1
+      RouteTableId: !Ref DatabaseRouteTable
+
+  DatabaseSubnetRTAssoc2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref DatabaseSubnet2
+      RouteTableId: !Ref DatabaseRouteTable
+
+  DatabaseSubnetRTAssoc3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    Properties:
+      SubnetId: !Ref DatabaseSubnet3
+      RouteTableId: !Ref DatabaseRouteTable
+
+  # =========================================================================
+  # 8. Network Firewall
+  # =========================================================================
+  NetworkFirewall:
+    Type: AWS::NetworkFirewall::Firewall
+    DeletionPolicy: Delete
+    Properties:
+      FirewallName: !Sub "${ProjectName}-network-firewall-vpc"
+      VpcId: !Ref VPC
+      SubnetMappings:
+        - SubnetId: !Ref FirewallSubnet1
+          IPAddressType: IPV4
+        - SubnetId: !Ref FirewallSubnet2
+          IPAddressType: IPV4
+        - SubnetId: !Ref FirewallSubnet3
+          IPAddressType: IPV4
+      DeleteProtection: false
+      FirewallPolicyArn: !Ref FirewallPolicy
+      EnabledAnalysisTypes:
+        - HTTP_HOST
+        - TLS_SNI
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-network-firewall-vpc"
+
+  # =========================================================================
+  # 9. Firewall Policy
+  # =========================================================================
+  FirewallPolicy:
+    Type: AWS::NetworkFirewall::FirewallPolicy
+    DeletionPolicy: Delete
+    Properties:
+      FirewallPolicyName: !Sub "${ProjectName}-firewall-policy"
+      FirewallPolicy:
+        StatefulEngineOptions:
+          RuleOrder: STRICT_ORDER
+          StreamExceptionPolicy: REJECT
+        StatefulRuleGroupReferences:
+          - ResourceArn: !Sub "arn:aws:network-firewall:${AWS::Region}:aws-managed:stateful-rulegroup/AttackInfrastructureStrictOrder"
+            DeepThreatInspection: true
+            Priority: 1
+          - ResourceArn: !GetAtt BlockFacebookRuleGroup.RuleGroupArn
+            Priority: 2
+        StatelessDefaultActions:
+          - "aws:forward_to_sfe"
+        StatelessFragmentDefaultActions:
+          - "aws:forward_to_sfe"
+        StatefulDefaultActions:
+          - "aws:alert_established_app_layer"
+          - "aws:alert_strict"
+          - "aws:drop_established_app_layer"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-firewall-policy"
+
+  # =========================================================================
+  # 10. Block Facebook Rule Group
+  # =========================================================================
+  BlockFacebookRuleGroup:
+    Type: AWS::NetworkFirewall::RuleGroup
+    DeletionPolicy: Delete
+    Properties:
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroupName: !Sub "${ProjectName}-block-facebook"
+      RuleGroup:
+        StatefulRuleOptions:
+          RuleOrder: STRICT_ORDER
+        RulesSource:
+          StatefulRules:
+            - Action: DROP
+              Header:
+                Protocol: IP
+                Source: !Ref VpcCidr
+                SourcePort: ANY
+                Direction: FORWARD
+                Destination: "57.144.0.0/14"
+                DestinationPort: ANY
+              RuleOptions:
+                - Keyword: "msg"
+                  Settings:
+                    - '"BLOCK_META_NETWORK"'
+                - Keyword: "sid"
+                  Settings:
+                    - "1000005"
+                - Keyword: "rev"
+                  Settings:
+                    - "1"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-block-facebook"
+
+  # =========================================================================
+  # 11. VPC Flow Log IAM Role
+  # =========================================================================
+  VPCFlowLogRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: Delete
+    Properties:
+      RoleName: !Sub "${ProjectName}-VPCFlowLogs-CloudWatch"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: vpc-flow-logs.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:vpc-flow-log/*"
+      Policies:
+        - PolicyName: FlowLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-VPCFlowLogs-CloudWatch"
+
+  # =========================================================================
+  # 12. Flow Logs + Log Groups
+  # =========================================================================
+
+  # --- VPC Flow Log ---
+  VPCFlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub "${ProjectName}-${AWS::StackName}-vpc-flow-logs"
+      RetentionInDays: 30
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${AWS::StackName}-vpc-flow-logs"
+
+  VPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    DeletionPolicy: Delete
+    Properties:
+      ResourceId: !Ref VPC
+      ResourceType: VPC
+      TrafficType: ALL
+      MaxAggregationInterval: 60
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: !Ref VPCFlowLogGroup
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      LogFormat: "${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status} ${ecs-cluster-name} ${ecs-cluster-arn} ${ecs-container-instance-id} ${ecs-container-instance-arn} ${ecs-service-name} ${ecs-task-definition-arn} ${ecs-task-id} ${ecs-task-arn} ${ecs-container-id} ${ecs-second-container-id}"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc-flow-log"
+
+  # --- Database Subnet Flow Logs ---
+  DatabaseSubnetFlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub "${ProjectName}-${AWS::StackName}-database-subnets-vpc-flow-log"
+      RetentionInDays: 30
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${AWS::StackName}-database-subnets-vpc-flow-log"
+
+  DatabaseSubnetFlowLog1:
+    Type: AWS::EC2::FlowLog
+    DeletionPolicy: Delete
+    Properties:
+      ResourceId: !Ref DatabaseSubnet1
+      ResourceType: Subnet
+      TrafficType: ALL
+      MaxAggregationInterval: 60
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: !Ref DatabaseSubnetFlowLogGroup
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      LogFormat: "${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status} ${ecs-cluster-name} ${ecs-cluster-arn} ${ecs-container-instance-id} ${ecs-container-instance-arn} ${ecs-service-name} ${ecs-task-definition-arn} ${ecs-task-id} ${ecs-task-arn} ${ecs-container-id} ${ecs-second-container-id}"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-database-subnet1-flow-log"
+
+  DatabaseSubnetFlowLog2:
+    Type: AWS::EC2::FlowLog
+    DeletionPolicy: Delete
+    Properties:
+      ResourceId: !Ref DatabaseSubnet2
+      ResourceType: Subnet
+      TrafficType: ALL
+      MaxAggregationInterval: 60
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: !Ref DatabaseSubnetFlowLogGroup
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      LogFormat: "${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status} ${ecs-cluster-name} ${ecs-cluster-arn} ${ecs-container-instance-id} ${ecs-container-instance-arn} ${ecs-service-name} ${ecs-task-definition-arn} ${ecs-task-id} ${ecs-task-arn} ${ecs-container-id} ${ecs-second-container-id}"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-database-subnet2-flow-log"
+
+  DatabaseSubnetFlowLog3:
+    Type: AWS::EC2::FlowLog
+    DeletionPolicy: Delete
+    Properties:
+      ResourceId: !Ref DatabaseSubnet3
+      ResourceType: Subnet
+      TrafficType: ALL
+      MaxAggregationInterval: 60
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: !Ref DatabaseSubnetFlowLogGroup
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      LogFormat: "${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status} ${ecs-cluster-name} ${ecs-cluster-arn} ${ecs-container-instance-id} ${ecs-container-instance-arn} ${ecs-service-name} ${ecs-task-definition-arn} ${ecs-task-id} ${ecs-task-arn} ${ecs-container-id} ${ecs-second-container-id}"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-database-subnet3-flow-log"
+
+  # =========================================================================
+  # 13. DHCP Options
+  # =========================================================================
+  DHCPOptions:
+    Type: AWS::EC2::DHCPOptions
+    DeletionPolicy: Delete
+    Properties:
+      DomainName: ec2.internal
+      DomainNameServers:
+        - AmazonProvidedDNS
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-dhcp-options"
+
+  DHCPOptionsAssociation:
+    Type: AWS::EC2::VPCDHCPOptionsAssociation
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      DhcpOptionsId: !Ref DHCPOptions
+
+  # =========================================================================
+  # 14. Network ACL (allow all - SGs provide real filtering)
+  # =========================================================================
+  NetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-nacl"
+
+  NetworkAclInboundRule:
+    Type: AWS::EC2::NetworkAclEntry
+    DeletionPolicy: Delete
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: "0.0.0.0/0"
+
+  NetworkAclOutboundRule:
+    Type: AWS::EC2::NetworkAclEntry
+    DeletionPolicy: Delete
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: 100
+      Protocol: -1
+      Egress: true
+      RuleAction: allow
+      CidrBlock: "0.0.0.0/0"
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  VpcId:
+    Description: VPC identifier
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${ProjectName}-VpcId"
+
+  PublicSubnet1Id:
+    Description: Public subnet in AZ1
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${ProjectName}-PublicSubnet1Id"
+
+  PublicSubnet2Id:
+    Description: Public subnet in AZ2
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub "${ProjectName}-PublicSubnet2Id"
+
+  PublicSubnet3Id:
+    Description: Public subnet in AZ3
+    Value: !Ref PublicSubnet3
+    Export:
+      Name: !Sub "${ProjectName}-PublicSubnet3Id"
+
+  PrivateSubnet1Id:
+    Description: Private subnet in AZ1
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${ProjectName}-PrivateSubnet1Id"
+
+  PrivateSubnet2Id:
+    Description: Private subnet in AZ2
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub "${ProjectName}-PrivateSubnet2Id"
+
+  PrivateSubnet3Id:
+    Description: Private subnet in AZ3
+    Value: !Ref PrivateSubnet3
+    Export:
+      Name: !Sub "${ProjectName}-PrivateSubnet3Id"
+
+  DatabaseSubnet1Id:
+    Description: Database subnet in AZ1
+    Value: !Ref DatabaseSubnet1
+    Export:
+      Name: !Sub "${ProjectName}-DatabaseSubnet1Id"
+
+  DatabaseSubnet2Id:
+    Description: Database subnet in AZ2
+    Value: !Ref DatabaseSubnet2
+    Export:
+      Name: !Sub "${ProjectName}-DatabaseSubnet2Id"
+
+  DatabaseSubnet3Id:
+    Description: Database subnet in AZ3
+    Value: !Ref DatabaseSubnet3
+    Export:
+      Name: !Sub "${ProjectName}-DatabaseSubnet3Id"
+
+  FirewallSubnet1Id:
+    Description: Firewall subnet in AZ1
+    Value: !Ref FirewallSubnet1
+    Export:
+      Name: !Sub "${ProjectName}-FirewallSubnet1Id"
+
+  FirewallSubnet2Id:
+    Description: Firewall subnet in AZ2
+    Value: !Ref FirewallSubnet2
+    Export:
+      Name: !Sub "${ProjectName}-FirewallSubnet2Id"
+
+  FirewallSubnet3Id:
+    Description: Firewall subnet in AZ3
+    Value: !Ref FirewallSubnet3
+    Export:
+      Name: !Sub "${ProjectName}-FirewallSubnet3Id"

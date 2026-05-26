@@ -1,0 +1,447 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Edge layer (CloudFront CDN, WAF, DNS)"
+
+Parameters:
+  ProjectName:
+    Type: String
+  DomainName:
+    Type: String
+    Default: ""
+    Description: "Optional custom domain name. Leave empty to use the CloudFront distribution domain."
+  AcmCertificateArn:
+    Type: String
+    Default: ""
+    Description: "Optional ACM certificate ARN for CloudFront (must be in us-east-1)"
+  AlbArn:
+    Type: String
+  AlbDnsName:
+    Type: String
+  ApiGatewayId:
+    Type: String
+  ApiGatewayInvokeUrl:
+    Type: String
+  FrontendBucketDomainName:
+    Type: String
+    Description: "S3 bucket regional domain name (e.g., bucket.s3.us-east-1.amazonaws.com)"
+  HostedZoneId:
+    Type: String
+    Default: ""
+    Description: "Route 53 Hosted Zone ID. If empty, no DNS record is created."
+
+Conditions:
+  HasCustomDomain: !And
+    - !Not [!Equals [!Ref DomainName, ""]]
+    - !Not [!Equals [!Ref AcmCertificateArn, ""]]
+  HasHostedZone: !And
+    - !Condition HasCustomDomain
+    - !Not [!Equals [!Ref HostedZoneId, ""]]
+
+Resources:
+  # ---------- CloudFront VPC Origin ----------
+  VpcOrigin:
+    Type: AWS::CloudFront::VpcOrigin
+    Properties:
+      VpcOriginEndpointConfig:
+        Name: !Sub "${ProjectName}-vpc-origin-alb"
+        Arn: !Ref AlbArn
+        HTTPPort: 8000
+        HTTPSPort: 443
+        OriginProtocolPolicy: http-only
+        OriginSSLProtocols:
+          - TLSv1.2
+
+  # ---------- Origin Access Control (S3) ----------
+  OriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${ProjectName}-s3-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # ---------- Cache Policies ----------
+  CachingDisabledPolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub "${ProjectName}-CachingDisabled"
+        Comment: "No caching — pass through to origin"
+        MinTTL: 0
+        MaxTTL: 0
+        DefaultTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingGzip: false
+          EnableAcceptEncodingBrotli: false
+          HeadersConfig:
+            HeaderBehavior: none
+          CookiesConfig:
+            CookieBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+  CachingOptimizedPolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub "${ProjectName}-CachingOptimized"
+        Comment: "Caching enabled for static assets"
+        MinTTL: 1
+        MaxTTL: 31536000
+        DefaultTTL: 86400
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: true
+          HeadersConfig:
+            HeaderBehavior: none
+          CookiesConfig:
+            CookieBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+  UseOriginCacheControlPolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub "${ProjectName}-UseOriginCacheControl"
+        Comment: "Respects origin Cache-Control headers"
+        MinTTL: 0
+        MaxTTL: 31536000
+        DefaultTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: true
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers:
+              - x-method-override
+              - origin
+              - host
+              - x-http-method
+              - x-http-method-override
+          CookiesConfig:
+            CookieBehavior: all
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+  # ---------- Origin Request Policies ----------
+  AllViewerPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub "${ProjectName}-AllViewer"
+        Comment: "Forward all viewer parameters"
+        HeadersConfig:
+          HeaderBehavior: allViewer
+        CookiesConfig:
+          CookieBehavior: all
+        QueryStringsConfig:
+          QueryStringBehavior: all
+
+  AllViewerExceptHostPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub "${ProjectName}-AllViewerExceptHost"
+        Comment: "Forward all except Host header"
+        HeadersConfig:
+          HeaderBehavior: allExcept
+          Headers:
+            - host
+        CookiesConfig:
+          CookieBehavior: all
+        QueryStringsConfig:
+          QueryStringBehavior: all
+
+  # ---------- CloudFront Function (URL rewrite) ----------
+  UrlRewriteFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub "${ProjectName}-url-rewrite"
+      FunctionConfig:
+        Comment: "Append .html for clean URLs"
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          if (uri !== '/' && !uri.includes('.') && !uri.endsWith('/')) {
+            request.uri = uri + '.html';
+          }
+          return request;
+        }
+      AutoPublish: true
+
+  # ---------- WAF Web ACL ----------
+  WebACL:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: !Sub "${ProjectName}-waf"
+      Scope: CLOUDFRONT
+      DefaultAction:
+        Allow: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub "${ProjectName}-waf"
+      Rules:
+        - Name: AntiDDoS
+          Priority: 0
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesAntiDDoSRuleSet
+              ManagedRuleGroupConfigs:
+                - AWSManagedRulesAntiDDoSRuleSet:
+                    ClientSideActionConfig:
+                      Challenge:
+                        UsageOfAction: ENABLED
+                        Sensitivity: HIGH
+                        ExemptUriRegularExpressions:
+                          - RegexString: "\\/api\\/|\\.(acc|avi|css|gif|ico|jpe?g|js|json|mp[34]|ogg|otf|pdf|png|tiff?|ttf|webm|webp|woff2?|xml)$"
+                    SensitivityToBlock: LOW
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AntiDDoS
+
+        - Name: RateLimit
+          Priority: 1
+          Action:
+            Block: {}
+          Statement:
+            RateBasedStatement:
+              AggregateKeyType: IP
+              EvaluationWindowSec: 300
+              Limit: 500
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: RateLimit
+
+        - Name: IPReputation
+          Priority: 2
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesAmazonIpReputationList
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: IPReputation
+
+        - Name: CommonRuleSet
+          Priority: 3
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: CommonRuleSet
+
+        - Name: KnownBadInputs
+          Priority: 4
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesKnownBadInputsRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: KnownBadInputs
+
+        - Name: SQLInjection
+          Priority: 5
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesSQLiRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: SQLInjection
+
+  # ---------- CloudFront Distribution ----------
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        HttpVersion: http2
+        IPV6Enabled: true
+        PriceClass: PriceClass_All
+        DefaultRootObject: index.html
+        Aliases: !If
+          - HasCustomDomain
+          - - !Ref DomainName
+          - !Ref AWS::NoValue
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        WebACLId: !GetAtt WebACL.Arn
+        Origins:
+          - Id: s3-frontend
+            DomainName: !Ref FrontendBucketDomainName
+            OriginAccessControlId: !GetAtt OriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+            OriginShield:
+              Enabled: true
+              OriginShieldRegion: !Ref AWS::Region
+          - Id: api-gateway
+            DomainName: !Sub "${ApiGatewayId}.execute-api.${AWS::Region}.amazonaws.com"
+            OriginPath: /v1
+            CustomOriginConfig:
+              HTTPSPort: 443
+              HTTPPort: 80
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+          - Id: vpc-origin-alb
+            DomainName: !Ref AlbDnsName
+            VpcOriginConfig:
+              VpcOriginId: !GetAtt VpcOrigin.Id
+              OriginReadTimeout: 30
+              OriginKeepaliveTimeout: 5
+        DefaultCacheBehavior:
+          TargetOriginId: s3-frontend
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          CachePolicyId: !Ref UseOriginCacheControlPolicy
+          AllowedMethods:
+            - HEAD
+            - DELETE
+            - POST
+            - GET
+            - OPTIONS
+            - PUT
+            - PATCH
+          CachedMethods:
+            - HEAD
+            - GET
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt UrlRewriteFunction.FunctionARN
+        CacheBehaviors:
+          - PathPattern: /health
+            TargetOriginId: api-gateway
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            CachePolicyId: !Ref CachingDisabledPolicy
+            OriginRequestPolicyId: !Ref AllViewerExceptHostPolicy
+            AllowedMethods:
+              - HEAD
+              - GET
+            CachedMethods:
+              - HEAD
+              - GET
+          - PathPattern: /health-check
+            TargetOriginId: api-gateway
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            CachePolicyId: !Ref CachingDisabledPolicy
+            OriginRequestPolicyId: !Ref AllViewerExceptHostPolicy
+            AllowedMethods:
+              - HEAD
+              - GET
+            CachedMethods:
+              - HEAD
+              - GET
+          - PathPattern: "/api/*"
+            TargetOriginId: vpc-origin-alb
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            CachePolicyId: !Ref CachingDisabledPolicy
+            OriginRequestPolicyId: !Ref AllViewerExceptHostPolicy
+            AllowedMethods:
+              - HEAD
+              - DELETE
+              - POST
+              - GET
+              - OPTIONS
+              - PUT
+              - PATCH
+            CachedMethods:
+              - HEAD
+              - GET
+          - PathPattern: "/ws/*"
+            TargetOriginId: vpc-origin-alb
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            CachePolicyId: !Ref UseOriginCacheControlPolicy
+            AllowedMethods:
+              - HEAD
+              - DELETE
+              - POST
+              - GET
+              - OPTIONS
+              - PUT
+              - PATCH
+            CachedMethods:
+              - HEAD
+              - GET
+          - PathPattern: "/*"
+            TargetOriginId: s3-frontend
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            CachePolicyId: !Ref CachingOptimizedPolicy
+            AllowedMethods:
+              - HEAD
+              - GET
+            CachedMethods:
+              - HEAD
+              - GET
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt UrlRewriteFunction.FunctionARN
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: none
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-distribution"
+
+  # ---------- Route 53 DNS Record ----------
+  DnsRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+        EvaluateTargetHealth: false
+
+Outputs:
+  CloudFrontDistributionId:
+    Description: "CloudFront Distribution ID"
+    Value: !Ref CloudFrontDistribution
+    Export:
+      Name: !Sub "${ProjectName}-CloudFrontDistributionId"
+  CloudFrontDomainName:
+    Description: "CloudFront Distribution Domain Name"
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub "${ProjectName}-CloudFrontDomainName"
+  WebACLArn:
+    Description: "WAF Web ACL ARN"
+    Value: !GetAtt WebACL.Arn
+    Export:
+      Name: !Sub "${ProjectName}-WebACLArn"
